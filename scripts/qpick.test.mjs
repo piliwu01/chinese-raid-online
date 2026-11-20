@@ -1,0 +1,11 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {pickBankQuestion} from '../shared/qpick.js';import {freshState,applyAction} from '../shared/game.js';
+const mk=(n,d,p)=>Array.from({length:n},(_,i)=>({id:`${p}${i}`,stem:`${p}${i}?`,options:['a','b','c','d'],answer:'A',explanation:'x',status:'active',difficulty:d}));
+const bank={bankId:'t',questions:[...mk(5,'hard','h'),...mk(8,'medium','m'),...mk(6,'easy','e'),{...mk(1,'hard','x')[0],status:'review'}]};
+test('each difficulty is exhausted before any repeat',()=>{const s={};const got=[];for(let i=0;i<6;i++)got.push(pickBankQuestion(s,bank,'easy').id);assert.equal(new Set(got).size,6);const next=pickBankQuestion(s,bank,'easy').id;assert(got.includes(next));assert.equal(s.seenQ.t.easy.length,1);});
+test('critical uses all hard first, then unseen medium, then reshuffles hard; inactive never used',()=>{const s={};const seq=[];for(let i=0;i<14;i++)seq.push(pickBankQuestion(s,bank,'hard').id);
+ assert.deepEqual(new Set(seq.slice(0,5).map(x=>x[0])),new Set(['h']));assert.equal(new Set(seq.slice(0,5)).size,5);
+ assert.equal(new Set(seq.slice(5,13)).size,8);assert(seq.slice(5,13).every(x=>x[0]==='m'));assert.equal(seq[13][0],'h');assert(!seq.includes('x0'));});
+test('medium already used by critical fallback is not repeated by special attack',()=>{const s={};for(let i=0;i<8;i++)pickBankQuestion(s,bank,'hard');const m=[];for(let i=0;i<5;i++)m.push(pickBankQuestion(s,bank,'medium').id);assert.equal(new Set(m).size,5);assert.equal(s.seenQ.t.medium.length,8);});
+test('switching bank drops old history; seen list is not sent to the client',()=>{const s={};pickBankQuestion(s,bank,'easy');pickBankQuestion(s,{...bank,bankId:'u'},'easy');assert.deepEqual(Object.keys(s.seenQ),['u']);
+ const g=freshState();applyAction(g,'/starter',{id:2010},1);applyAction(g,'/battle/start',{},1);applyAction(g,'/question',{move:'critical',bankId:'t'},1,bank);assert.ok(g.seenQ.t.hard.length===1);});

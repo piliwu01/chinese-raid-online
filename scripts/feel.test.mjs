@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {effectiveness} from '../shared/typechart.js';import {freshState,applyAction} from '../shared/game.js';
+import {recordStudy,studySummary} from '../shared/learning.js';import {isNight,featuredId,NIGHT_ONLY,weekIndex} from '../shared/schedule.js';import {pickEnemy,poolFor} from '../shared/chapters.js';
+test('type effectiveness',()=>{assert.equal(effectiveness('fire','grass').kind,'super');assert.equal(effectiveness('grass','fire').kind,'weak');assert.equal(effectiveness('normal','water').kind,null);assert.equal(effectiveness('electric','water').mult,1.25);});
+test('crit and super effective multiply damage',()=>{const r=Math.random;try{
+ const s=freshState();applyAction(s,'/starter',{id:2010},1);applyAction(s,'/battle/start',{},1);s.battle.enemy={...s.battle.enemy,type:'water'};s.battle.hp=999;s.battle.maxHp=999;
+ applyAction(s,'/question',{move:'quick'},1);const q=s.pending;Math.random=()=>0;const e=applyAction(s,'/answer',{questionId:q.id,choice:q.answer},1);
+ assert.equal(e.crit,true);assert.equal(e.effect,'super');assert.equal(e.combat.damage-(e.passive?.id==='kui'?e.passive.value:0),Math.round(22*1*1.25*1.5));}finally{Math.random=r;}});
+test('study stats by category, weak detection and 7-day activity',()=>{const s={};const now=Date.parse('2026-11-19T04:00:00Z');for(let i=0;i<6;i++)recordStudy(s,'修辭',i<2,now);for(let i=0;i<6;i++)recordStudy(s,'成語',true,now-86400000);
+ const r=studySummary(s,now);assert.equal(r.answered,12);assert.equal(r.correct,8);assert.deepEqual(r.weak.map(c=>c.category),['修辭']);assert.equal(r.activeDays7,2);});
+test('solo answers are recorded into study stats',()=>{const s=freshState();applyAction(s,'/starter',{id:2010},1);applyAction(s,'/battle/start',{},1);applyAction(s,'/question',{move:'quick'},1);const q=s.pending;applyAction(s,'/answer',{questionId:q.id,choice:q.answer},1);assert.equal(s.study.total.r+s.study.total.w,1);});
+test('night-only beasts and weekly featured beast',()=>{const day=Date.parse('2026-11-19T04:00:00Z'),night=Date.parse('2026-11-19T14:00:00Z');assert.equal(isNight(day),false);assert.equal(isNight(night),true);
+ for(let i=0;i<200;i++)assert(!NIGHT_ONLY.includes(pickEnemy(6,day,0).id));
+ assert.equal(featuredId(day),featuredId(day+2*86400000));assert.notEqual(weekIndex(day),weekIndex(day+7*86400000));assert(!NIGHT_ONLY.includes(featuredId(day)));
+ const f=featuredId(day);const ch=[1,2,3,4,5,6].find(c=>poolFor(c).some(p=>p.id===f));assert.equal(pickEnemy(ch,day,0,()=>0).id,f);});
+test('wild enemies start at 500 HP and only counterattack after a wrong answer',()=>{const s=freshState();applyAction(s,'/starter',{id:2010},1);applyAction(s,'/battle/start',{},1);
+ assert.equal(s.battle.maxHp,500);assert.equal(s.battle.hp,500);
+ applyAction(s,'/question',{move:'quick'},1);let q=s.pending;let e=applyAction(s,'/answer',{questionId:q.id,choice:q.answer},1);assert.equal(e.combat.enemyDamage,0);assert.equal(s.battle.playerHp,185);
+ applyAction(s,'/question',{move:'quick'},1);q=s.pending;const wrong=q.options.find(o=>o!==q.answer);e=applyAction(s,'/answer',{questionId:q.id,choice:wrong},1);assert(e.combat.enemyDamage>=18&&e.combat.enemyDamage<=33);assert.equal(s.battle.playerHp,185-e.combat.enemyDamage);});
+test('wild enemies enrage at half HP: wrong-answer counter ×1.5',()=>{const s=freshState();applyAction(s,'/starter',{id:2010},1);applyAction(s,'/battle/start',{},1);const orig=Math.random;
+ const wrongAt=(hp)=>{s.battle.hp=hp;s.battle.playerHp=185;applyAction(s,'/question',{move:'quick'},1);const q=s.pending;const wrong=q.options.find(o=>o!==q.answer);Math.random=()=>0;try{return applyAction(s,'/answer',{questionId:q.id,choice:wrong},1);}finally{Math.random=orig;}};
+ let e=wrongAt(250);assert.equal(e.enraged,true);assert.equal(e.combat.enemyDamage,27);
+ e=wrongAt(260);assert.equal(e.combat.enemyDamage,18);assert.ok(!e.enraged);});
