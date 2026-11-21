@@ -734,3 +734,10 @@ body.app-focus .milestone-checks{margin:4px 0}
 @media(max-width:480px){.hp-break{margin-top:6px;padding-top:6px;gap:4px}.boost-pick button{min-width:24px;min-height:24px}.shield-pips i,.orb-pips i{width:10px;height:10px}}
 /* 手機：夥伴血條卡片多了靈氣列，夥伴圖略縮小避免被卡片蓋住 */
 @media(max-width:760px){body.battle-focus .battle-full .player-fighter{width:min(148px,38cqh);height:min(148px,38cqh)}}
+/* 夜晚月亮：原本在左上角會被戰場名稱與夥伴血條卡片蓋住，改到右上角的空白天空 */
+.atmo-night::after{left:auto;right:10%;top:6%}
+@media(max-width:760px){.atmo-night::after{right:6px;top:6px;width:46px;height:46px}}
+/* 選項字體與題目一樣大（2026-11-21）：個人對戰、墨漬怪巢穴 */
+body.battle-focus .bank-options b{font-size:calc(26px * var(--bf,1));line-height:1.6}
+@media(max-width:760px){body.battle-focus .bank-options b{font-size:calc(21px * var(--bf,1))}}
+.ink-options button{font-size:16px}

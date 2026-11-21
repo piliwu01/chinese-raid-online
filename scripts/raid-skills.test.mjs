@@ -19,6 +19,16 @@ test('curse: wrong answers cost the class shield 2 each while active',()=>{const
 test('fog picks a quarter of the class and only tells each student about themselves',()=>{const s=room(28);castAt(s,now+60000,'fog');advanceRoom(s,now+63000);assert.equal(s.skill.targets.length,7);const t=s.skill.targets[0];
  assert.equal(publicSkill(s,t).fogMe,true);assert.equal(publicSkill(s,'nobody').fogMe,false);assert.equal(publicSkill(s,t).targets,undefined);});
 test('class ultimate interrupts a warning or active skill',()=>{const s=room(15);castAt(s,now+60000,'shuffle');assert.equal(s.skill.stage,'warn');for(let i=0;i<15;i++)recordHit(s,s.members['s'+i],true,now+61000,'easy');assert.equal(s.skill,null);assert.ok(s.events.some(e=>e.type==='skill-break'));});
-test('skills come every 60s before enrage and every 45s after; never the same twice in a row; pause shifts timers',()=>{const s=room();advanceRoom(s,now+60000);const first=s.skill.id;advanceRoom(s,now+63000+70000);
- assert.ok(s.skillNextAt>=now+120000);s.phase=2;advanceRoom(s,s.skillNextAt);const second=s.skill?.id;assert.notEqual(second,first);
+// 時間軸固定：第一招改成 10 秒的亂序咒，避免隨機抽到長短不同的技能，造成「第幾招」對不上（舊版約 1/10 機率誤判失敗）。
+test('skills come every 60s before enrage and every 45s after; never the same twice in a row; pause shifts timers',()=>{
+ const s=room();s.nextAttackAt=Infinity;advanceRoom(s,now+60000);assert.equal(s.skill.stage,'warn');s.skill.id='shuffle';
+ advanceRoom(s,now+60000+BOSS_SKILL.warn+BOSS_SKILLS.shuffle.duration);assert.equal(s.skill,null);assert.equal(s.lastSkill,'shuffle');
+ assert.equal(s.skillNextAt,now+120000,'暴走前：上一招出招後 60 秒');
+ advanceRoom(s,now+120000);assert.equal(s.skill.stage,'warn');assert.notEqual(s.skill.id,'shuffle','不會連續出同一招');
+ const e=room();e.nextAttackAt=Infinity;e.phase=2;advanceRoom(e,now+60000);e.skill.id='shuffle';advanceRoom(e,now+60000+BOSS_SKILL.warn+BOSS_SKILLS.shuffle.duration);
+ assert.equal(e.skillNextAt,now+105000,'暴走後：上一招出招後 45 秒');
+ // 整場連續出招：相鄰兩招一定不同（不論隨機抽到什麼）
+ const all=room();all.nextAttackAt=Infinity;const seq=[];
+ for(let t=now;t<now+RAID.duration-10000;t+=1000){advanceRoom(all,t);if(all.skill&&seq.at(-1)?.at!==all.skill.at&&all.skill.stage==='warn')seq.push({id:all.skill.id,at:all.skill.at});}
+ assert.ok(seq.length>=5,'整場至少出招 5 次');for(let i=1;i<seq.length;i++)assert.notEqual(seq[i].id,seq[i-1].id);
  const s2=room();pauseRoom(s2,now+30000);resumeRoom(s2,now+50000);assert.equal(s2.skillNextAt,now+80000);});

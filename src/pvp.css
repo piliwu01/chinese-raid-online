@@ -24,3 +24,6 @@
 @keyframes pvp-lunge{0%{translate:0 0}40%{translate:var(--lunge) -6px}100%{translate:0 0}}
 @keyframes pvp-hurt{0%{translate:0 0;filter:none}18%{translate:var(--kb) 0;filter:brightness(2.4) saturate(.2)}36%{filter:none}54%{translate:calc(var(--kb) * .5) 0;filter:brightness(1.9) saturate(.4)}100%{translate:0 0;filter:none}}
 @media (prefers-reduced-motion:reduce){.pvp-fx>i,.pvp-bolt{display:none}.pvp-fighter.is-acting .pvp-portrait img,.pvp-fighter.is-hurt .pvp-portrait img{animation:none}.pvp-hit{animation:fx-fade 1.5s both}}
+/* 選項字體與題目一樣大（2026-11-21）：PVP */
+.pvp-options>button>strong{font-size:29px;line-height:1.6}
+@media(max-width:600px){.pvp-options>button>strong{font-size:24px}}
