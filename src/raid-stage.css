@@ -116,3 +116,28 @@
 @media(max-width:600px){.student-raid .raid-answer-options b{font-size:24px}}
 /* 字體放大後，手機上兩欄太窄，改成一欄 */
 @media(max-width:600px){.student-raid .raid-answer-options{grid-template-columns:1fr}}
+/* 魔王登場標題卡（投影畫面，2026-11-21） */
+.boss-intro{position:absolute;inset:0;z-index:40;pointer-events:none;display:grid;place-items:center;overflow:hidden}
+.intro-dim{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,#5a0d1acc,#05060cf2 70%);animation:introDim 3.8s ease-out forwards}
+.intro-slash{position:absolute;left:-10%;right:-10%;top:50%;height:4px;background:linear-gradient(90deg,transparent,#ff5a6a,#ffd36b,#ff5a6a,transparent);box-shadow:0 0 24px #ff5a6a;transform:translateY(-50%) scaleX(0);animation:introSlash 3.8s ease-out forwards}
+.intro-text{position:relative;text-align:center;animation:introText 3.8s cubic-bezier(.2,.8,.2,1) forwards}
+.intro-kicker{display:block;font:900 clamp(16px,2.2cqw,30px)/1 system-ui;letter-spacing:.6em;color:#ff8a95;text-shadow:0 0 12px #ff3b4f}
+.intro-text h2{margin:.25em 0 .2em;font:900 clamp(56px,11cqw,170px)/1 'Noto Sans TC',system-ui;letter-spacing:.12em;color:#fff3e0;text-shadow:0 0 28px #ff3b4f,0 6px 0 #4a0b14,0 0 60px #b40f2d}
+.intro-text p{margin:0;font:800 clamp(16px,2cqw,30px)/1.4 'Noto Sans TC',system-ui;color:#ffd36b;letter-spacing:.08em}
+@keyframes introDim{0%{opacity:0}8%,85%{opacity:1}100%{opacity:0}}
+@keyframes introSlash{0%,6%{transform:translateY(-50%) scaleX(0)}16%{transform:translateY(-50%) scaleX(1)}85%{opacity:1}100%{opacity:0;transform:translateY(-50%) scaleX(1)}}
+@keyframes introText{0%,10%{opacity:0;transform:scale(1.35);filter:blur(8px)}22%{opacity:1;transform:scale(1);filter:none}82%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(1.08)}}
+/* 魔王技能斜長條（投影與學生畫面） */
+.skill-sweep{position:absolute;inset:0;z-index:35;pointer-events:none;display:grid;place-items:center;overflow:hidden}
+.skill-sweep.is-compact{position:fixed;z-index:60}
+.sweep-band{width:150%;height:clamp(90px,24%,180px);transform:rotate(-7deg);display:flex;align-items:center;justify-content:center;gap:3%;background:linear-gradient(90deg,#0a0a12f0,#2a0b18f5 40%,#7a1024f5 50%,#2a0b18f5 60%,#0a0a12f0);border-top:3px solid #ff5a6a;border-bottom:3px solid #ff5a6a;box-shadow:0 0 40px #ff3b4f99;animation:sweepBand 2.6s cubic-bezier(.2,.8,.2,1) forwards}
+.skill-sweep.is-compact .sweep-band{height:110px;width:170%}
+.sweep-icon{font-size:clamp(40px,6cqw,90px);transform:rotate(7deg);filter:drop-shadow(0 0 12px #ff5a6a)}
+.skill-sweep.is-compact .sweep-icon{font-size:44px}
+.sweep-text{display:flex;flex-direction:column;align-items:flex-start;transform:rotate(7deg)}
+.sweep-text small{font:800 clamp(13px,1.6cqw,22px)/1.2 'Noto Sans TC',system-ui;letter-spacing:.2em;color:#ff9aa4}
+.sweep-text strong{font:900 clamp(44px,7cqw,110px)/1.05 'Noto Sans TC',system-ui;letter-spacing:.1em;color:#fff;text-shadow:0 0 20px #ff3b4f,4px 4px 0 #4a0b14}
+.skill-sweep.is-compact .sweep-text small{font-size:13px}
+.skill-sweep.is-compact .sweep-text strong{font-size:40px}
+@keyframes sweepBand{0%{transform:rotate(-7deg) translateX(100%)}12%{transform:rotate(-7deg) translateX(0)}88%{transform:rotate(-7deg) translateX(0);opacity:1}100%{transform:rotate(-7deg) translateX(-100%);opacity:0}}
+@media(prefers-reduced-motion:reduce){.intro-dim,.intro-slash,.intro-text,.sweep-band{animation:none}.intro-slash{transform:translateY(-50%)}}

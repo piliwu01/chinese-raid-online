@@ -1,6 +1,7 @@
 import SceneBg from './SceneBg.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {SkillBanner} from './BossSkill.jsx';
+import {BossIntro,SkillSweep} from './RaidFx.jsx';
 import {Swords,Shield,Clock,Zap,Users} from 'lucide-react';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
@@ -76,7 +77,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
    <RaidStatuses room={room} now={now}/>
-   <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/>
+   <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BossIntro room={room} now={now}/>
    <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''}`}>
     <div className="stage-boss-aura"/><div className="stage-boss-shadow"/>
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
