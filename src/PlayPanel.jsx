@@ -3,11 +3,13 @@ import {SPIRIT_BY_ID} from '../shared/catalog.js';
 import AiTutor from './AiTutor.jsx';
 import {ListChecks,Gift,Sparkles,Award,Clock,Check} from 'lucide-react';
 import {itemById} from '../shared/items.js';
+import {rewardText} from '../shared/collection.js';
 
 // 冒險準備頁的三張卡片：每日任務、墨漬怪巢穴（錯題複習）、收集套組與稱號。
 export default function PlayPanel({cloud,act,artwork,busy}){
  const [message,setMessage]=useState(''),[fight,setFight]=useState(null),[result,setResult]=useState(null),[left,setLeft]=useState(0);
- const quests=cloud.quests||[],nest=cloud.inkNest||[],sets=cloud.sets||[],titles=cloud.titles||[];
+ const quests=cloud.quests||[],nest=cloud.inkNest||[],sets=cloud.sets||[],titles=cloud.titles||[],master=cloud.master;
+ const claim=x=>!x.done?null:x.claimed?<span className="quest-done"><Check size={15}/>已領取</span>:<button className="quest-claim set-claim" disabled={busy} onClick={()=>run('/collection/claim',{id:x.id})}><Gift size={15}/>領取獎勵</button>;
  const ready=nest.filter(m=>m.ready),sleeping=nest.length-ready.length;
  useEffect(()=>{if(!fight)return;const tick=()=>setLeft(Math.max(0,Math.ceil((fight.expires-Date.now())/1000)));tick();const t=setInterval(tick,250);return()=>clearInterval(t);},[fight]);
  useEffect(()=>{if(fight&&!result&&left===0&&fight.expires<Date.now())answerInk(null);},[left]);
@@ -30,8 +32,9 @@ export default function PlayPanel({cloud,act,artwork,busy}){
     {nest.length?<div className="ink-grid">{nest.slice(-24).reverse().map(m=><button key={m.id} className={`ink-blob ${m.ready?'is-awake':''}`} disabled={busy||!m.ready} onClick={()=>startInk(m)} title={m.stem} aria-label={m.ready?`淨化墨漬怪：${m.stem}`:`沉睡中的墨漬怪：${m.stem}`}><i/><i/>{!m.ready&&<em>z</em>}</button>)}</div>:<p className="ink-empty">巢穴空空的，代表你目前沒有待複習的錯題！</p>}
    </article>
    <article className="play-card set-card">
-    <span className="cloud-eyebrow">COLLECTION SETS</span><h3><Award size={20}/>收集套組</h3><p>收齊一整組神獸就能獲得專屬稱號，配戴後會顯示在共同討伐中。</p>
-    <div className="set-list">{sets.map(s=><div key={s.id} className={`set-row ${s.done?'is-done':''}`}><div className="set-head"><b>{s.name}</b><span>{s.done?`✔ 已得稱號「${s.title}」`:`${s.have} / ${s.ids.length}`}</span></div><div className="set-icons">{s.ids.map(id=>{const owned=(cloud.captured||[]).some(p=>p.id===id),name=SPIRIT_BY_ID.get(id)?.zhName||id;return <figure key={id} className={`set-slot ${owned?'is-owned':'is-missing'}`} title={owned?`${name}（已收服）`:`${name}（尚未收服）`}><span><img src={artwork(id)} alt="" loading="lazy"/></span><figcaption>{owned?'':'？'}{name}</figcaption></figure>;})}</div><small className="set-reward">集齊可得稱號「{s.title}」</small></div>)}</div>
+    <span className="cloud-eyebrow">COLLECTION SETS</span><h3><Award size={20}/>收集套組</h3><p>收齊一整組神獸就能獲得專屬稱號（配戴後會顯示在共同討伐中），還能領一次獎勵。</p>
+    {master&&<div className={`set-row master-row ${master.done?'is-done':''}`}><div className="set-head"><b>👑 {master.name}：集齊全部野外神獸</b><span>{master.have} / {master.total}</span></div><div className="master-bar" role="progressbar" aria-label="全部神獸收集進度" aria-valuemin={0} aria-valuemax={master.total} aria-valuenow={master.have}><i style={{width:`${master.have/master.total*100}%`}}/></div><div className="set-foot"><small className="set-reward">集齊可得最高稱號「{master.title}」＋{rewardText(master.reward)}</small>{claim(master)}</div></div>}
+    <div className="set-list">{sets.map(s=><div key={s.id} className={`set-row ${s.done?'is-done':''}`}><div className="set-head"><b>{s.name}{s.rare&&<em className="set-rare">稀有</em>}</b><span>{s.done?`✔ 已得稱號「${s.title}」`:`${s.have} / ${s.ids.length}`}</span></div><div className="set-icons">{s.ids.map(id=>{const owned=(cloud.captured||[]).some(p=>p.id===id),name=SPIRIT_BY_ID.get(id)?.zhName||id;return <figure key={id} className={`set-slot ${owned?'is-owned':'is-missing'}`} title={owned?`${name}（已收服）`:`${name}（尚未收服）`}><span><img src={artwork(id)} alt="" loading="lazy"/></span><figcaption>{owned?'':'？'}{name}</figcaption></figure>;})}</div><div className="set-foot"><small className="set-reward">集齊可得稱號「{s.title}」＋{rewardText(s.reward)}</small>{claim(s)}</div></div>)}</div>
     {titles.length>0&&<label className="title-pick">配戴稱號<select value={cloud.title||''} disabled={busy} onChange={e=>run('/title',{title:e.target.value})}><option value="">不配戴</option>{titles.map(t=><option key={t} value={t}>{t}</option>)}</select></label>}
    </article>
   </div>

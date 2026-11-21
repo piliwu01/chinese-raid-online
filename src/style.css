@@ -708,3 +708,9 @@ body.app-focus .milestone-checks{margin:4px 0}
 @media (prefers-reduced-motion:reduce){.boss-skill-warn{animation:none}}
 .battle-hint-toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:60;background:#1e293b;color:#fde68a;border:1px solid #f7d65c;border-radius:12px;padding:12px 18px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.45);max-width:min(92vw,560px);text-align:center;animation:bhIn .25s ease-out}
 @keyframes bhIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
+/* 收集獎勵（2026-11-21） */
+.set-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}.set-foot .set-reward{margin-top:0;flex:1;min-width:0}
+.set-claim{background:#f5cc55;color:#3b2b00}.set-claim:disabled{opacity:.6}
+.set-rare{margin-left:6px;padding:1px 6px;border-radius:6px;background:#5b3a8c;color:#f1e2ff;font-style:normal;font-size:10.5px;font-weight:800;vertical-align:1px}
+.master-row{margin-bottom:8px;border-color:#7d5cc0aa}
+.master-bar{height:8px;border-radius:99px;background:#0a121c;overflow:hidden}.master-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9a6cff,#f5cc55)}

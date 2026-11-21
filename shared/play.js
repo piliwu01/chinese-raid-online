@@ -1,5 +1,6 @@
 // 遊戲化規則（伺服器與畫面共用）：題型分類、連擊、每日任務、收集套組、墨漬怪巢穴、閃光題靈。
 // 這裡只放純函式與常數；寫入學生進度的地方都由伺服器呼叫。
+import { CATALOG } from './catalog.js';
 
 // ---------- 題型分類（魔王弱點用）----------
 const CATEGORY_RULES = [
@@ -37,20 +38,32 @@ export const classComboNeed = members => Math.max(CLASS_COMBO.min, Math.min(CLAS
 export const SHINY_RATE = 0.02;
 
 // ---------- 收集套組與稱號 ----------
+// 集齊一組可得稱號，並可領一次獎勵（reward：食物、玉符、道具）。稀有套組獎勵加倍。
+const SET_REWARD = { food: 5, jade: 2 }, RARE_SET_REWARD = { food: 10, jade: 4 };
 export const SETS = [
-  { id: 'flood', name: '洪水之兆', title: '治水使者', ids: [2021, 2038, 2045, 2084] }, // 長右、蠃魚、蠻蠻、夫諸
-  { id: 'drought', name: '旱魃之兆', title: '祈雨師', ids: [2025, 2024, 2075, 2083] }, // 肥遺、鱄魚、獙獙、鳴蛇
-  { id: 'ward', name: '驅凶護身', title: '辟邪者', ids: [2034, 2035, 2050, 2041] }, // 天狗、讙、孟槐、冉遺之魚
-  { id: 'auspice', name: '四方祥瑞', title: '瑞獸知音', ids: [2095, 2096, 2065, 2097] }, // 騶吾、吉量、象蛇、三青鳥
-  { id: 'fiends', name: '上古凶獸', title: '伏魔者', ids: [2037, 2059, 2040, 2022] }, // 窮奇、狍鴞、帝江、蠱雕
-  { id: 'fish', name: '山海奇魚', title: '博物君子', ids: [2049, 2028, 2052, 2072] }, // 何羅之魚、文鰩魚、儵魚、珠蟞魚
+  { id: 'flood', name: '洪水之兆', title: '治水使者', ids: [2021, 2038, 2045, 2084], reward: SET_REWARD }, // 長右、蠃魚、蠻蠻、夫諸
+  { id: 'drought', name: '旱魃之兆', title: '祈雨師', ids: [2025, 2024, 2075, 2083], reward: SET_REWARD }, // 肥遺、鱄魚、獙獙、鳴蛇
+  { id: 'ward', name: '驅凶護身', title: '辟邪者', ids: [2034, 2035, 2050, 2041], reward: SET_REWARD }, // 天狗、讙、孟槐、冉遺之魚
+  { id: 'auspice', name: '四方祥瑞', title: '瑞獸知音', ids: [2095, 2096, 2065, 2097], reward: RARE_SET_REWARD, rare: true }, // 騶吾、吉量、象蛇、三青鳥
+  { id: 'fiends', name: '上古凶獸', title: '伏魔者', ids: [2037, 2059, 2040, 2022], reward: RARE_SET_REWARD, rare: true }, // 窮奇、狍鴞、帝江、蠱雕
+  { id: 'fish', name: '山海奇魚', title: '博物君子', ids: [2049, 2028, 2052, 2072], reward: SET_REWARD }, // 何羅之魚、文鰩魚、儵魚、珠蟞魚
 ];
+// 集齊全部野外神獸（catalog.js 的 CATALOG，不含四條主角進化線）。
+export const MASTER = { id: 'master', name: '山海全錄', title: '神獸至尊', ids: CATALOG.map(p => p.id), reward: { food: 30, jade: 10, items: { potion: 5 } } };
 export const setFor = id => SETS.find(set => set.ids.includes(Number(id))) || null;
-export function setProgress(captured) {
+const progressOf = (set, owned, claimed) => {
+  const have = set.ids.filter(id => owned.has(id)).length, done = have === set.ids.length;
+  return { ...set, have, done, claimed: !!claimed?.[set.id] };
+};
+export function setProgress(captured, claimed = {}) {
   const owned = new Set((captured || []).map(p => p.id));
-  return SETS.map(set => ({ ...set, have: set.ids.filter(id => owned.has(id)).length, done: set.ids.every(id => owned.has(id)) }));
+  return SETS.map(set => progressOf(set, owned, claimed));
 }
-export const earnedTitles = captured => setProgress(captured).filter(s => s.done).map(s => s.title);
+export function masterProgress(captured, claimed = {}) {
+  const { ids, ...rest } = progressOf(MASTER, new Set((captured || []).map(p => p.id)), claimed);
+  return { ...rest, total: ids.length };
+}
+export const earnedTitles = captured => [...setProgress(captured).filter(s => s.done).map(s => s.title), ...(masterProgress(captured).done ? [MASTER.title] : [])];
 
 // ---------- 每日任務 ----------
 // reward：食物數量與一個道具（道具 id 對應 shared/items.js）。

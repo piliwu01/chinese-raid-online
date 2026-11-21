@@ -24,6 +24,7 @@ import {itemById,bagOf} from './items.js';
 import {ownedSpirit} from './ownership.js';
 import {categorize,comboMultiplier,SHINY_RATE,bumpQuest,questState,publicQuests,QUESTS,addInk,inkReady,publicInk,INK,earnedTitles,setProgress} from './play.js';
 import {MAX_XP} from '../src/growth.js';
+import {claimCollection,publicCollection} from './collection.js';
 
 export {taipeiDate};
 export const freshState = () => ({bestiary:BESTIARY_VERSION,growth:freshGrowth(),nickname:'',food:0,bond:0,days:[],fed:[],roundDays:[],passes:{},claimed:{},items:{},captured:[],selected:DEFAULT_SELECTED,battle:null,pending:null,challenge:null});
@@ -32,7 +33,7 @@ export const itemName = (starter,at) => ({2010:['雷之徽章','雷霆之證'],2
 export const requiredDays = at => at===50?7:14;
 export function fail(message,status=400){throw Object.assign(new Error(message),{status});}
 export const publicQuestion = q => q ? {id:q.id,question:q.question,options:q.options,optionTexts:q.optionTexts,timeLimit:q.timeLimit,expires:q.expires,difficulty:q.difficulty,category:q.category} : null;
-export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,...out}=s;const day=taipeiDate(now);return {...out,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:earnedTitles(s.captured),sets:setProgress(s.captured),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
+export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,...out}=s;const day=taipeiDate(now);return {...out,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:earnedTitles(s.captured),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;
@@ -132,6 +133,8 @@ export function applyAction(s,route,b,now,bank=null){
   const r=convertDupe(s,b.id,b.to);event.convert=r;event.message=`${r.zhName} 副本卡已轉化為 ${r.label} ×${r.amount}${r.rare?'（稀有加倍）':''}。`;
  }else if(route==='/hero/claim'){
   const got=claimHero(s,b.awards);if(!got.length)fail('目前沒有可領取的英雄榜獎勵。');event.awards=got;event.jade=got.reduce((a,b)=>a+b.jade,0);event.message=`英雄榜獎勵入帳：玉符 ${event.jade} 枚！`;
+ }else if(route==='/collection/claim'){
+  needPartner(s);event={...event,...claimCollection(s,b.id)};
  }else if(route==='/title'){
   const value=String(b.title||'');if(value&&!earnedTitles(s.captured).includes(value))fail('還沒有取得這個稱號。',403);s.title=value;event.message=value?`已配戴稱號「${value}」。`:'已取消配戴稱號。';
  }else if(route==='/bank/change'){

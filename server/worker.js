@@ -110,7 +110,7 @@ async function route(req,env){
   fail('找不到此管理功能。',404);
  }
  if(req.method!=='POST')fail('找不到此功能。',404);
- const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert'];if(!allowed.includes(path))fail('找不到此操作。',404);
+ const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert','/collection/claim'];if(!allowed.includes(path))fail('找不到此操作。',404);
  if(env.RAIDS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const member=await currentMembership(env,user);if(member&&['waiting','active','paused'].includes(member.status))fail('你正在共同討伐房間中，請先回到討伐。',409);}
  if(env.PVPS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const activity=await activeActivity(env,user);if(activity?.mode==='pvp')fail('你正在 PVP 房間中，請先回到對決。',409);}
  let bank=null;if(body.bankId&&body.bankId!=='math-auto'){const row=await db.prepare('SELECT data FROM banks WHERE id=?').bind(String(body.bankId)).first();if(!row)fail('找不到題庫，請重新選擇。',404);bank=JSON.parse(row.data);}
