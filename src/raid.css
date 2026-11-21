@@ -9,3 +9,9 @@
 /* 選項字體與題目一樣大（2026-11-21）：共同討伐 */
 .raid-answer-options b{font-size:27px;line-height:1.6}
 @media(max-width:700px){.raid-answer-options b{font-size:25px}}
+/* 討伐入口魔王圖：原本往右、往下超出卡片被切掉，改為完整放在卡片內（2026-11-21） */
+.raid-entry-story>img{right:16px;bottom:8px}
+@media(max-width:700px){.raid-entry-story>img{right:8px;bottom:6px}}
+/* 手機：入口卡片欄寬不得被內容撐大（原本會超出畫面被切掉右側） */
+@media(max-width:700px){.raid-entry{grid-template-columns:minmax(0,1fr)}.raid-entry>*{min-width:0}}
+@media(max-width:700px){.raid-entry-form{grid-template-columns:minmax(0,1fr)}.raid-entry-form>*{min-width:0;max-width:100%}.raid-entry-form input,.raid-entry-form select{min-width:0;width:100%}}
