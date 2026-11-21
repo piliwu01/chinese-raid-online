@@ -741,3 +741,53 @@ body.app-focus .milestone-checks{margin:4px 0}
 body.battle-focus .bank-options b{font-size:calc(26px * var(--bf,1));line-height:1.6}
 @media(max-width:760px){body.battle-focus .bank-options b{font-size:calc(21px * var(--bf,1))}}
 .ink-options button{font-size:16px}
+/* 戰鬥介面字體放大（2026-11-21）：招式、血條卡片、傷藥、戰鬥紀錄 */
+body.battle-focus .action-heading{font-size:calc(17px * var(--bf,1))}
+body.battle-focus .move-button strong{font-size:calc(22px * var(--bf,1));line-height:1.4}
+body.battle-focus .move-button small{font-size:calc(16px * var(--bf,1));line-height:1.6}
+body.battle-focus .move-button .type-tag{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .card-cat{font-size:calc(14px * var(--bf,1));padding:1px 9px}
+body.battle-focus .solo-potion button{font-size:calc(18px * var(--bf,1))}
+body.battle-focus .solo-potion span{font-size:calc(16px * var(--bf,1))}
+body.battle-focus .battle-logs>div{font-size:calc(16px * var(--bf,1))}
+body.battle-focus .hp-meta{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .hp-numbers{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .hp-numbers b{font-size:calc(19px * var(--bf,1))}
+body.battle-focus .hp-numbers small{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .hp-break,body.battle-focus .break-label,body.battle-focus .boost-hint,body.battle-focus .break-note{font-size:calc(13px * var(--bf,1))}
+body.battle-focus .break-weak em{font-size:calc(13px * var(--bf,1))}
+body.battle-focus .boost-pick button{font-size:calc(14px * var(--bf,1));min-width:calc(32px * var(--bf,1));min-height:calc(30px * var(--bf,1))}
+@media(max-width:760px){
+body.battle-focus .action-heading{font-size:calc(15px * var(--bf,1))}
+body.battle-focus .move-button strong{font-size:calc(19px * var(--bf,1))}
+body.battle-focus .move-button small{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .move-button .type-tag,body.battle-focus .card-cat{font-size:calc(12px * var(--bf,1))}
+body.battle-focus .solo-potion button{font-size:calc(16px * var(--bf,1))}
+body.battle-focus .solo-potion span{font-size:calc(14px * var(--bf,1))}
+body.battle-focus .hp-name strong{font-size:calc(18px * var(--bf,1))}
+body.battle-focus .hp-meta,body.battle-focus .hp-numbers,body.battle-focus .hp-numbers small{font-size:calc(12px * var(--bf,1))}
+body.battle-focus .hp-numbers b{font-size:calc(16px * var(--bf,1))}
+body.battle-focus .hp-break,body.battle-focus .break-label,body.battle-focus .boost-hint,body.battle-focus .break-note,body.battle-focus .break-weak em{font-size:calc(12px * var(--bf,1))}
+body.battle-focus .boost-pick button{font-size:calc(13px * var(--bf,1));min-width:calc(28px * var(--bf,1));min-height:calc(26px * var(--bf,1))}
+}
+@media(max-width:760px){
+body.battle-focus .hp-meta,body.battle-focus .hp-numbers,body.battle-focus .hp-numbers small{font-size:calc(11px * var(--bf,1))}
+body.battle-focus .hp-numbers b{font-size:calc(15px * var(--bf,1))}
+body.battle-focus .hp-break,body.battle-focus .break-label,body.battle-focus .boost-hint,body.battle-focus .break-note,body.battle-focus .break-weak em{font-size:calc(11px * var(--bf,1))}
+body.battle-focus .break-label{min-width:auto}
+body.battle-focus .boost-pick{flex-wrap:nowrap;gap:4px}
+body.battle-focus .boost-pick button{font-size:calc(12px * var(--bf,1));min-width:calc(24px * var(--bf,1));min-height:calc(24px * var(--bf,1))}
+body.battle-focus .hp-break{margin-top:6px;padding-top:6px;gap:4px}
+body.battle-focus .hp-track{margin-top:9px}
+}
+/* 手機：字放大後招式按鈕太高會壓縮戰場，改為不顯示招式小圖示與右側提示語，讓文字一行放得下 */
+@media(max-width:760px){
+body.battle-focus .battle-full .move-button .move-icon{display:none}
+body.battle-focus .battle-full .move-button{padding:10px 12px;min-height:0}
+body.battle-focus .battle-full .action-heading>span{display:none}
+body.battle-focus .battle-full .action-heading{margin-bottom:10px}
+}
+/* 招式字體放大後戰場變矮，敵人卡片會升到右上角；電腦版月亮改放上方中間偏左的空白天空 */
+@media(min-width:761px){.atmo-night::after{right:56%;top:6%}}
+/* 手機：夥伴卡片省略「屬性／你的冒險夥伴」一列（剋制資訊已顯示在招式上），避免卡片蓋到夥伴圖 */
+@media(max-width:760px){body.battle-focus .battle-full .player-hp .hp-meta:not(:has(.shell-tag)){display:none}body.battle-focus .battle-full .player-hp .hp-meta:has(.shell-tag)>:not(.shell-tag){display:none}}
