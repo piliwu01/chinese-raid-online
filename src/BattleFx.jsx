@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 
 const reduced = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-// 破盾瞬間：斜長條帶著夥伴大圖橫掃戰場，閃白光，約 1.3 秒後自動消失。
+// 破盾瞬間：斜長條帶著夥伴大圖橫掃戰場，閃白光，整段約 3 秒後自動消失（CUTIN_MS）。
+export const CUTIN_MS = 3000;
 export function BreakCutIn({ fx, onDone }) {
   useEffect(() => {
     if (!fx) return;
-    const t = setTimeout(onDone, reduced() ? 900 : 1400);
+    const t = setTimeout(onDone, reduced() ? 1500 : CUTIN_MS);
     return () => clearTimeout(t);
   }, [fx?.key]);
   if (!fx) return null;

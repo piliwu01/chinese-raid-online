@@ -794,17 +794,17 @@ body.battle-focus .battle-full .action-heading{margin-bottom:10px}
 /* 破盾切入特寫（2026-11-21） */
 .break-cutin{position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden;display:grid;place-items:center}
 .cutin-flash{position:absolute;inset:0;background:#fff;opacity:0;animation:cutinFlash .5s ease-out}
-.cutin-band{position:relative;width:140%;height:clamp(110px,34%,200px);transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;gap:4%;background:linear-gradient(90deg,#1b1240ee,#5b2bb0f2 45%,#f7d65cf2 50%,#5b2bb0f2 55%,#1b1240ee);border-top:3px solid #f7d65c;border-bottom:3px solid #f7d65c;box-shadow:0 0 40px #9b8cffaa;animation:cutinBand 1.35s cubic-bezier(.2,.8,.2,1) forwards}
-.cutin-band img{height:150%;max-height:300px;object-fit:contain;filter:drop-shadow(0 0 14px #fff8);transform:rotate(8deg);animation:cutinImg 1.35s ease-out forwards}
+.cutin-band{position:relative;width:140%;height:clamp(110px,34%,200px);transform:rotate(-8deg);display:flex;align-items:center;justify-content:center;gap:4%;background:linear-gradient(90deg,#1b1240ee,#5b2bb0f2 45%,#f7d65cf2 50%,#5b2bb0f2 55%,#1b1240ee);border-top:3px solid #f7d65c;border-bottom:3px solid #f7d65c;box-shadow:0 0 40px #9b8cffaa;animation:cutinBand 3s cubic-bezier(.2,.8,.2,1) forwards}
+.cutin-band img{height:150%;max-height:300px;object-fit:contain;filter:drop-shadow(0 0 14px #fff8);transform:rotate(8deg);animation:cutinImg 3s ease-out forwards}
 .cutin-text{display:flex;flex-direction:column;align-items:flex-start;transform:rotate(8deg)}
 .cutin-text strong{font:900 clamp(34px,6vw,74px)/1 'Noto Sans TC',system-ui;color:#fff;letter-spacing:4px;text-shadow:0 0 18px #f7d65c,3px 3px 0 #3b1d7a}
 .cutin-text span{margin-top:6px;font:800 clamp(11px,1.3vw,16px)/1.2 system-ui;letter-spacing:4px;color:#ffe9a0}
-.cutin-note{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);margin:0;padding:6px 14px;border-radius:999px;background:#0d1424cc;color:#ffd36b;font-weight:800;font-size:calc(14px * var(--bf,1));white-space:nowrap;animation:cutinNote 1.35s ease-out forwards}
+.cutin-note{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);margin:0;padding:6px 14px;border-radius:999px;background:#0d1424cc;color:#ffd36b;font-weight:800;font-size:calc(14px * var(--bf,1));white-space:nowrap;animation:cutinNote 3s ease-out forwards}
 .arena-break{animation:arenaShake .45s ease-out}
 @keyframes cutinFlash{0%{opacity:.85}100%{opacity:0}}
-@keyframes cutinBand{0%{transform:rotate(-8deg) translateX(-110%)}18%{transform:rotate(-8deg) translateX(0)}78%{transform:rotate(-8deg) translateX(0);opacity:1}100%{transform:rotate(-8deg) translateX(110%);opacity:0}}
-@keyframes cutinImg{0%{transform:rotate(8deg) scale(1.25)}30%{transform:rotate(8deg) scale(1)}100%{transform:rotate(8deg) scale(1.04)}}
-@keyframes cutinNote{0%,25%{opacity:0;transform:translate(-50%,10px)}35%,85%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
+@keyframes cutinBand{0%{transform:rotate(-8deg) translateX(-110%)}9%{transform:rotate(-8deg) translateX(0)}90%{transform:rotate(-8deg) translateX(0);opacity:1}100%{transform:rotate(-8deg) translateX(110%);opacity:0}}
+@keyframes cutinImg{0%{transform:rotate(8deg) scale(1.25)}14%{transform:rotate(8deg) scale(1)}100%{transform:rotate(8deg) scale(1.06)}}
+@keyframes cutinNote{0%,12%{opacity:0;transform:translate(-50%,10px)}18%,90%{opacity:1;transform:translate(-50%,0)}100%{opacity:0}}
 @keyframes arenaShake{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-3px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
 @media(max-width:760px){.cutin-band{height:clamp(90px,30%,150px);gap:3%}.cutin-band img{height:140%}.cutin-note{font-size:calc(12px * var(--bf,1));bottom:8%}}
 @media(prefers-reduced-motion:reduce){.cutin-band,.cutin-band img,.cutin-note,.cutin-flash,.arena-break{animation:none}.cutin-note{opacity:1}}
