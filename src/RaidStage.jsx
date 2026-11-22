@@ -3,6 +3,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {SkillBanner} from './BossSkill.jsx';
 import {BossIntro,SkillSweep,BossShieldBar,BreakSweep,ActionTimeline} from './RaidFx.jsx';
 import {Swords,Shield,Heart,Clock,Zap,Users} from 'lucide-react';
+import {StatusChips,bossStatusItems,teamStatusItems} from './StatusChips.jsx';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
 import {collectStageEvents,formation,effectLabel,EFFECT_LIFETIME,roomIdentity} from './raid-stage.js';
@@ -35,7 +36,9 @@ export function WeakBanner({room,now,compact=false}){
  return <div className={`weak-banner ${compact?'is-inline':''}`} role="status"><span>弱點題型</span><b>{w.category}</b><small>傷害 ×2 · 剩 {Math.max(0,Math.ceil((w.until-now)/1000))} 秒</small></div>;
 }
 export function RaidStatuses({room,now}){
- return <div className="stage-statuses">{room.stunUntil>now&&<span>💫 暈眩 {Math.ceil((room.stunUntil-now)/1000)} 秒</span>}{room.poisonTicks>0&&<span>🧪 毒傷剩 {room.poisonTicks} 次</span>}{room.guardCharges>0&&<span>💎 守護 {room.guardCharges} 波</span>}{room.drumUntil>now&&<span>🥁 戰鼓 {Math.ceil((room.drumUntil-now)/1000)} 秒</span>}</div>;
+ const boss=bossStatusItems(room,now).filter(Boolean),team=teamStatusItems(room,now).filter(Boolean);
+ if(!boss.length&&!team.length)return null;
+ return <div className="stage-statuses">{boss.length>0&&<StatusChips items={boss} label="魔王狀態" className="is-row"/>}{team.length>0&&<StatusChips items={team} label="全班狀態" className="is-row is-team"/>}</div>;
 }
 const TAUNT_FALLBACK={start:'區區學子，也敢挑戰本座？',boss:'墨浪滔天，看你們如何招架！',phase:'本座怒矣！墨焰焚書！',ultimate:'這……這是什麼合體之術！',low:'本座……尚未言敗！'};
 function useBossTaunt(room,incoming){
@@ -76,17 +79,15 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
   <section ref={arenaRef} className={`raid-arena ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.members.length>36?'is-crowded':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
-   <RaidStatuses room={room} now={now}/>
    <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BreakSweep room={room} now={now}/><BossIntro room={room} now={now}/>
    <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''}`}>
     <div className="stage-boss-aura"/><div className="stage-boss-shadow"/>
+    <StatusChips items={bossStatusItems(room,now)} label="魔王狀態" className="boss-status"/>
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
     <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3></div>
     {taunt&&<div key={taunt.key} className="boss-taunt" role="status">{taunt.text}</div>}
-    {room.stunUntil>now&&<span className="boss-condition">💫 暈眩中</span>}
-    {room.poisonTicks>0&&<span className="boss-poison">毒霧侵蝕中</span>}
    </div>
-   <div className="formation-title"><Users size={14}/>我們的隊伍 <b>{room.members.length}</b><span>{room.members.filter(m=>m.online).length} 人在線</span></div>
+   <div className="formation-title"><Users size={14}/>我們的隊伍 <b>{room.members.length}</b><span>{room.members.filter(m=>m.online).length} 人在線</span><StatusChips items={teamStatusItems(room,now)} label="全班狀態" className="team-status"/></div>
    {positions.map(m=>{
     const action=effects.filter(e=>e.actorId===m.id).at(-1),attacking=(action&&['hit','strong','fire'].includes(action.type))||!!ultimate,supporting=action&&!attacking;
     return <div key={m.id} className={`stage-unit ${attacking?'is-attacking':''} ${supporting?'is-supporting':''} ${m.online?'is-online':'is-offline'}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--sprite-size':`${spriteSize}px`}} data-member-id={m.id}>

@@ -864,3 +864,37 @@ body.battle-focus .battle-full .action-heading{margin-bottom:10px}
  .latent-panel.is-full{border-color:#ff9ae3;box-shadow:0 0 12px #ff7ad955}
  .latent-panel.is-full .latent-track i{background:linear-gradient(90deg,#ff7ad9,#ffd76a)}
 }
+/* 2026-11-22 狀態圖示與回合數 */
+.status-chips{display:flex;flex-wrap:wrap;gap:5px;pointer-events:auto}
+.status-chip{position:relative;display:inline-flex;align-items:center;gap:4px;padding:3px 9px 3px 6px;border-radius:99px;font-size:13px;font-weight:800;line-height:1.2;white-space:nowrap;background:#121a29e6;border:1.5px solid #8ba2c066;color:#e6ecf5;box-shadow:0 2px 6px #0006}
+.status-chip i{font-style:normal;font-size:15px}
+.status-chip .sc-n{display:inline-flex;align-items:baseline;min-width:18px;justify-content:center;padding:0 5px;margin-left:2px;border-radius:99px;font:900 13px ui-monospace,monospace;background:#ffffff1f}
+.status-chip .sc-n small{font:700 10px system-ui,sans-serif;margin-left:1px;opacity:.85}
+.status-chip.tone-buff{border-color:#6fdcb0aa;color:#c9f5e2}
+.status-chip.tone-buff .sc-n{background:#2f8f6a;color:#fff}
+.status-chip.tone-warn{border-color:#ff8f8faa;color:#ffd6d6}
+.status-chip.tone-warn .sc-n{background:#b8404a;color:#fff}
+.fighter-status{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);justify-content:center;width:max-content;max-width:260px;z-index:6;margin-bottom:2px}
+body.battle-focus .fighter-status .status-chip{font-size:calc(12px * var(--bf,1))}
+@media(max-width:760px){.fighter-status{max-width:170px;gap:3px}.fighter-status .status-chip{font-size:11px!important;padding:2px 6px 2px 4px}.fighter-status .status-chip i{font-size:12px}.fighter-status .status-chip .sc-n{font-size:11px;min-width:14px;padding:0 3px}.fighter-status .sc-label{display:none}}
+.fighter-status{left:-6px;right:-6px;transform:none;width:auto;max-width:none;flex-wrap:wrap-reverse;justify-content:center;gap:4px}
+/* 手機：狀態圖示改放在戰場最上方一條（左：夥伴，右：對手），隱藏地點小字 */
+.arena-status-strip{display:none}
+@media(max-width:760px){
+ .fighter-status{display:none}
+ body.battle-focus .arena:has(.arena-status-strip) .arena-caption{display:none}
+ .arena-status-strip{display:flex;position:absolute;top:8px;left:12px;right:12px;z-index:7;justify-content:space-between;gap:6px;pointer-events:none}
+ .arena-status-strip .status-chips{gap:3px;flex-wrap:nowrap}
+ .arena-status-strip .strip-enemy{margin-left:auto}
+ .arena-status-strip .status-chip{font-size:11px;padding:2px 6px 2px 4px}
+ .arena-status-strip .status-chip i{font-size:12px}
+ .arena-status-strip .status-chip .sc-n{font-size:11px;min-width:14px;padding:0 3px}
+ .arena-status-strip .sc-label{display:none}
+}
+@media(max-width:760px){
+ .arena-status-strip{top:3px;left:12px;right:auto;max-width:190px;flex-direction:column;align-items:flex-start;gap:3px}
+ .arena-status-strip .strip-enemy{margin-left:0}
+ .arena-status-strip .strip-enemy::before{content:'對手';align-self:center;font-size:10px;font-weight:800;color:#ffd6d6;margin-right:2px}
+ .arena-status-strip .strip-player::before{content:'我方';align-self:center;font-size:10px;font-weight:800;color:#c9f5e2;margin-right:2px}
+ .arena-status-strip .status-chips{flex-wrap:wrap}
+}

@@ -356,3 +356,14 @@
 .action-timeline.is-compact .tl-item i{top:21px;width:16px;height:16px;left:-8px}
 .action-timeline.is-compact .tl-item.row-0 span{bottom:40px}
 .action-timeline.is-compact .tl-item.row-1 span{top:40px}
+/* 2026-11-22 討伐狀態圖示 */
+.stage-boss>.boss-status{position:absolute;top:2%;left:50%;transform:translateX(-50%);justify-content:center;width:max-content;max-width:100%;z-index:4}
+.stage-boss>.boss-status .status-chip{font-size:clamp(13px,1.5cqw,22px)}
+.stage-boss>.boss-status .status-chip i{font-size:clamp(15px,1.7cqw,26px)}
+.stage-boss>.boss-status .status-chip .sc-n{font-size:clamp(13px,1.5cqw,22px)}
+.formation-title .team-status{margin-left:auto}
+.formation-title .team-status .status-chip{font-size:clamp(11px,1.1cqw,16px)}
+.student-raid .stage-statuses{display:flex;flex-wrap:wrap;gap:6px 10px;padding:8px 15px 10px}
+.stage-statuses .status-chips.is-row{gap:5px}
+@media(max-width:600px){.formation-title .team-status .sc-label{display:none}.stage-boss>.boss-status .sc-label{display:none}}
+.stage-boss>.boss-status{z-index:7}

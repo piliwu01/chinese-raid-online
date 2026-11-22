@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 import { effectiveness } from '../shared/typechart.js';
 import DupeChoice from './DupeChoice.jsx';
 import {EnemyShield,PlayerBoost,LatentPanel} from './BreakBar.jsx';
+import {StatusChips} from './StatusChips.jsx';
 import {BreakCutIn,BattleTally} from './BattleFx.jsx';
 import { passiveFor } from '../shared/passives.js';
 import ItemShop from './ItemShop.jsx';
@@ -343,7 +344,7 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
   const freshTally = () => ({ answered: 0, correct: 0, xp: 0, maxCombo: 0, food: 0, jade: 0, chest: 0, breaks: 0 });
   const [tally, setTally] = useState(freshTally);
   const [boost, setBoost] = useState(0);
-  const takeBreak = b => { if (!b) return; setBrk({ weak: b.weak || [], shield: b.shield || 0, maxShield: b.maxShield || 0, broken: !!b.broken, orbs: b.orbs || 0, latent: b.latent || 0, cards: b.cards || [] }); setBoost(0); setAwaken(false); };
+  const takeBreak = b => { if (!b) return; setBrk({ weak: b.weak || [], shield: b.shield || 0, maxShield: b.maxShield || 0, broken: !!b.broken, orbs: b.orbs || 0, latent: b.latent || 0, burn: b.burn || 0, cards: b.cards || [] }); setBoost(0); setAwaken(false); };
   const showPassive = (pv) => { if(!pv) return; const fx={key:Date.now(),icon:pv.icon,name:pv.name,text:pv.text}; setPassiveFx(fx); addLog(`${pv.icon} 被動【${pv.name}】發動！${pv.text}`); setTimeout(()=>setPassiveFx(f=>f&&f.key===fx.key?null:f),2200); };
   useEffect(()=>{window.scrollTo(0,0);},[view]);
   useEffect(()=>{const fit=()=>{const w=window.innerWidth,h=window.innerHeight;const mobile=w<=760;const raw=mobile?Math.min(w/390,h/844):Math.min(w/1366,h/768);const s=Math.max(mobile?0.9:0.9,Math.min(mobile?1.15:1.45,raw));document.documentElement.style.setProperty('--bf',s.toFixed(3));};fit();window.addEventListener('resize',fit);return ()=>window.removeEventListener('resize',fit);},[]);
@@ -426,6 +427,20 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
   const [weakAlert, setWeakAlert] = useState(false);
   const enemyWeak = view==='battle' && canCapture(enemyHp, enemyMaxHp) && !['won','lost','caught','catching'].includes(battleState);
   const enemyEnraged = view==='battle' && enemyHp>0 && enemyMaxHp>0 && enemyHp<=enemyMaxHp/2 && !['won','lost','caught'].includes(battleState);
+  // 狀態圖示：數字是剩下的回合（題）或次數。
+  const fighting = view==='battle' && !['won','lost','caught'].includes(battleState);
+  const enemyStatus = fighting ? [
+    brk?.broken && { key:'break', icon:'💥', label:'破盾', n:1, unit:'題', tone:'buff', tip:'破盾：這一題傷害 ×2，答錯也不會被反擊' },
+    (brk?.burn||0)>0 && { key:'burn', icon:'🔥', label:'灼燒', n:brk.burn, unit:'回', tone:'buff', tip:'灼燒：每回合扣對手 HP' },
+    enemyEnraged && { key:'rage', icon:'😡', label:'暴走', tone:'warn', tip:'暴走：答錯時的反擊傷害 ×1.5' },
+    enemyWeak && { key:'weak', icon:'💫', label:'虛弱', tone:'buff', tip:'虛弱：HP 很低，可以收服' },
+  ] : [];
+  const playerStatus = fighting ? [
+    awaken && { key:'awaken', icon:'🌟', label:'覺醒', n:1, unit:'題', tone:'buff', tip:'覺醒一擊：傷害 ×3，答錯不被反擊' },
+    !awaken && boost>0 && { key:'boost', icon:'🔮', label:'蓄力', n:1, unit:'題', tone:'buff', tip:`投入 ${boost} 點靈氣：這一題傷害加成` },
+    playerShell>0 && { key:'shell', icon:'🛡️', label:'玄甲', n:playerShell, unit:'次', tone:'buff', tip:'玄甲：可擋下的反擊次數' },
+    combo>=2 && { key:'combo', icon:'⚡', label:'連擊', n:combo, tone:'buff', tip:'連續答對：傷害提高' },
+  ] : [];
   const wasWeak = useRef(false);
   const addLog = (text) => {
     setBattleLogs((prev) => [text, ...prev.slice(0, 7)]);
@@ -684,7 +699,7 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
     <div className="card-bottom">{!canUseSpirit(cloud,spirit.id)?'🔒 尚未收服 · 點看大圖':playerSpirit.id===spirit.id?'目前出戰夥伴 · 點看大圖':'點看大圖 · 可設為出戰'}<ChevronRight size={14}/></div>
   </button>;
   const hpPanel = (spirit, hp, max, level, enemy=false) => <div className={`hp-panel ${enemy?'enemy-hp':'player-hp'}`}>
-    <div className="hp-name"><strong>{spirit.shiny?'✨':''}{spirit.zhName || spirit.name}</strong><span>{!enemy && isGrowingPartner ? '養成 ' : ''}Lv. {level}</span></div><div className="hp-meta"><span className={`type-badge type-${spirit.type}`}>{typeLabel(spirit)}</span>{enemy&&enemyEnraged&&<span className="rage-tag" title="答錯時的反擊傷害 ×1.5">🔥 暴走</span>}{enemy&&enemyWeak&&<span className="weak-tag">💫 虛弱</span>}{!enemy&&playerShell>0&&<span className="shell-tag" title="玄甲護身：可擋下的反擊次數">🛡️ ×{playerShell}</span>}<span>{enemy?'野生神獸':'你的冒險夥伴'}</span></div>
+    <div className="hp-name"><strong>{spirit.shiny?'✨':''}{spirit.zhName || spirit.name}</strong><span>{!enemy && isGrowingPartner ? '養成 ' : ''}Lv. {level}</span></div><div className="hp-meta"><span className={`type-badge type-${spirit.type}`}>{typeLabel(spirit)}</span>{!enemy&&playerShell>0&&<span className="shell-tag" title="玄甲護身：可擋下的反擊次數">🛡️ ×{playerShell}</span>}<span>{enemy?'野生神獸':'你的冒險夥伴'}</span></div>
     <div className="hp-track"><span style={{width:`${hp/max*100}%`,background:hp/max>.5?'#4de0a6':hp/max>.2?'#f5cc55':'#ff6a79'}}/></div><div className="hp-numbers"><span>{enemy && canCapture(hp, max)?'可嘗試收服':'HP 生命值'}</span><b>{hp} <small>/ {max}</small></b></div>
     {enemy?<EnemyShield brk={brk}/>:<PlayerBoost brk={brk} boost={boost} setBoost={setBoost} awaken={awaken} setAwaken={setAwaken} disabled={!['ready','playerTurn'].includes(battleState)}/>}
   </div>;
@@ -713,13 +728,13 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
       {view==='battle' && <>
         <div className="active-bank-label">目前題庫：{selectedBank?.title || '自動數學練習'}{selectedBank ? ' · 題庫題型與倒數以匯入資料為準' : ''}</div>
         <div className="battle-heading"><div><span className="section-label">WILD ENCOUNTER</span><h1>{place}<span>{chapterById(battleMeta.chapter)?.name||'野生遭遇戰'} · 野生遭遇戰</span></h1></div><div className="battle-streak"><Trophy size={17}/> {winStreak} 連勝</div></div>
-        <div className="battle-layout battle-full"><section className="battle-main"><div className={`arena ${damagePopup?'impact':''} ${hitFx?.crit?'arena-crit':''} ${hitFx?.effect==='super'?'arena-super':''} ${cutIn?'arena-break':''}`}><BreakCutIn fx={cutIn} onDone={()=>setCutIn(null)}/>
+        <div className="battle-layout battle-full"><section className="battle-main"><div className={`arena ${damagePopup?'impact':''} ${hitFx?.crit?'arena-crit':''} ${hitFx?.effect==='super'?'arena-super':''} ${cutIn?'arena-break':''}`}>{(playerStatus.some(Boolean)||enemyStatus.some(Boolean))&&<div className="arena-status-strip"><StatusChips items={playerStatus} label="夥伴狀態" className="strip-player"/><StatusChips items={enemyStatus} label="對手狀態" className="strip-enemy"/></div>}<BreakCutIn fx={cutIn} onDone={()=>setCutIn(null)}/>
           <Forest/><SceneBg name={battleMeta.scene}/><AtmoLayer time={atmo.time} weather={atmo.weather}/><div className="arena-caption"><span className="live-dot"/> {place} · {atmo.timeLabel} · {atmo.weatherLabel} <Leaf size={14}/></div>{intro&&<EncounterIntro enemy={intro.enemy} battleId={intro.id} onDone={()=>setIntro(null)}/>}{combo>=2&&<div className={`combo-badge ${combo>=3?'is-hot':''}`} key={combo} role="status">🔥 <b>{combo}</b> 連擊{combo>=3&&<small>傷害 ×{(1+Math.min(combo,8)*0.1-0.2).toFixed(1)}</small>}</div>}
           {hpPanel(enemySpirit,enemyHp,enemyMaxHp,enemyLevel,true)}{hpPanel(playerSpirit,playerHp,playerMaxHp,playerLevel)}
           <div className="arena-platform enemy-platform"/><div className="arena-platform player-platform"/>
-          <div className={`fighter enemy-fighter ${enemyAnim}${enemyWeak?' is-weak':''}${enemyEnraged?' is-enraged':''}`}>{battleState==='won'&&<span className="ink-splash" aria-hidden="true"><i/><i/><i/><i/><i/><i/></span>}{enemyWeak&&<span className="weak-status" aria-hidden="true"><i>★</i><i>★</i><i>★</i><b>💧</b></span>}
+          <div className={`fighter enemy-fighter ${enemyAnim}${enemyWeak?' is-weak':''}${enemyEnraged?' is-enraged':''}`}><StatusChips items={enemyStatus} label="對手狀態" className="fighter-status"/>{battleState==='won'&&<span className="ink-splash" aria-hidden="true"><i/><i/><i/><i/><i/><i/></span>}{enemyWeak&&<span className="weak-status" aria-hidden="true"><i>★</i><i>★</i><i>★</i><b>💧</b></span>}
             {battleState==='catching'||battleState==='caught'?<div className={`catch-ball step-${catchShakeStep}`}><span/></div>:<img className={`idle-${motionFor(enemySpirit.type)}${enemySpirit.shiny?' is-shiny':''}`} style={idleStyle(enemySpirit.id,'enemy')} src={getSpriteUrl(enemySpirit.id)} onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=artwork(enemySpirit.id)}} alt={`野生的${enemySpirit.zhName || enemySpirit.name}`}/>}
-          {enemySpirit.shiny&&<span className="shiny-spark" aria-hidden="true"><i/><i/><i/><i/></span>}</div><div className={`fighter player-fighter ${playerAnim}`}><img className={`idle-${motionFor(playerSpirit.type)}${playerSpirit.shiny?' is-shiny':''}`} style={idleStyle(playerSpirit.id,'player')} src={getSpriteUrl(playerSpirit.id,true)} onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=artwork(playerSpirit.id)}} alt={`出戰的${playerSpirit.zhName || playerSpirit.name}`}/></div>
+          {enemySpirit.shiny&&<span className="shiny-spark" aria-hidden="true"><i/><i/><i/><i/></span>}</div><div className={`fighter player-fighter ${playerAnim}`}><StatusChips items={playerStatus} label="夥伴狀態" className="fighter-status"/><img className={`idle-${motionFor(playerSpirit.type)}${playerSpirit.shiny?' is-shiny':''}`} style={idleStyle(playerSpirit.id,'player')} src={getSpriteUrl(playerSpirit.id,true)} onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=artwork(playerSpirit.id)}} alt={`出戰的${playerSpirit.zhName || playerSpirit.name}`}/></div>
           {passiveFx&&<div key={passiveFx.key} className="passive-fx" role="status"><b>{passiveFx.icon} {passiveFx.name}！</b><span>{passiveFx.text}</span></div>}{matchupHint&&battleState!=='won'&&battleState!=='caught'&&<div key={matchupHint.key} className={`matchup-hint hint-${matchupHint.kind}`} role="status">{matchupHint.text}</div>}{weakAlert&&<div className="weak-callout" role="status"><span>💫</span><div><b>{enemySpirit.zhName || enemySpirit.name} 虛弱了！</b><small>HP 剩 15% 以下 · 現在可以使用女媧五色石收服</small></div></div>}{hitFx&&<div key={hitFx.key} className={`hit-fx hit-${hitFx.type} ${hitFx.crit?'is-crit':''} ${hitFx.effect?'eff-'+hitFx.effect:''}`} aria-hidden="true">{Array.from({length:hitFx.crit?14:9},(_,i)=><i key={i} style={{'--a':`${i*(360/(hitFx.crit?14:9))}deg`}}/>)}<b/></div>}{damagePopup && <span className={`damage-popup damage-${damagePopup.target} ${damagePopup.crit?'is-crit':''}`}>{damagePopup.crit&&<em className="crit-label">暴擊！</em>}{damagePopup.effect==='super'&&<em className="eff-label super">效果絕佳！</em>}{damagePopup.effect==='weak'&&<em className="eff-label weak">效果不太好…</em>}{damagePopup.text}{damagePopup.combo>0&&<em className="combo-flame">🔥{damagePopup.combo} 連擊 ×{Number(damagePopup.mult).toFixed(1)}</em>}</span>}
           <div className="arena-bottom-fade"/>
         </div>
