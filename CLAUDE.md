@@ -22,6 +22,7 @@
 - 建置：`npm run build`
 - 本機試玩：`npm run dev` 或雙擊 `start-local.cmd` → http://127.0.0.1:8788。本機老師帳密在 `work/本機老師帳密.txt`。反覆登入被擋時清登入限制：
   `npx wrangler d1 execute chinese-raid-db --local --command "delete from login_limits"`
+- 本機伺服器很吃記憶體（電腦只有 8 GB，wrangler dev＋workerd 約 1.6 GB，開著會讓磁碟因換頁飆到 100%）：只在需要瀏覽器實測時才啟動，**測試完立刻關閉**（含 workerd、esbuild 子程序）；若使用者要自己試玩，先告知仍開著，等使用者玩完再關。
 - 不以「build 成功」代替測試：版面改動要實際用瀏覽器在 1920×1080、1366×768、390×844 看過；用 `getBoundingClientRect` 量測重疊比看截圖可靠。
 
 ## 部署
