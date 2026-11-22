@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {ChevronLeft,ChevronRight,X} from 'lucide-react';
-// 遊戲說明懶人包：6 張直式圖卡，左右切換（按鈕、方向鍵、手機左右滑）。
-const PAGES=['第一次使用','選你的夥伴','打怪方式','收服神獸','每天變強','和同學一起玩'];
+// 遊戲說明懶人包：8 張直式圖卡（大字版），左右切換（按鈕、方向鍵、手機左右滑）。
+const PAGES=['第一次使用','選你的夥伴','打怪方式','破盾・蓄力・覺醒','收服神獸','每天變強','共同討伐','和同學一起玩'];
 export default function GuideViewer({onClose}){
  const [i,setI]=useState(0);const touch=useRef(null);const n=PAGES.length;
  const go=d=>setI(x=>Math.min(n-1,Math.max(0,x+d)));
