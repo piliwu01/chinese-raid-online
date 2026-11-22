@@ -17,3 +17,9 @@ test('enraged boss (phase 2) hits the shield 1.5x harder; guard still reduces 5'
  const s=room();s.phase=2;s.attackEvery=PHASE2.attackEvery;s.nextAttackAt=now+1;const before=s.shield;advanceRoom(s,now+2);assert.equal(before-s.shield,15);
  const g=room();g.phase=2;g.attackEvery=PHASE2.attackEvery;g.nextAttackAt=now+1;g.guardCharges=1;const b2=g.shield;advanceRoom(g,now+2);assert.equal(b2-g.shield,10);
  const n=room();n.nextAttackAt=now+1;const b3=n.shield;advanceRoom(n,now+2);assert.equal(b3-n.shield,10);});
+test('finishing freezes the remaining time, including a cancel while paused',()=>{
+ const a=room();finishRoom(a,'cancelled',now+100000);assert.equal(a.leftMs,RAID.duration-100000);
+ const b=room();pauseRoom(b,now+60000);finishRoom(b,'cancelled',now+500000);assert.equal(b.leftMs,RAID.duration-60000,'暫停中結束：以暫停那一刻計算');
+ const c=room();c.nextAttackAt=Infinity;c.skillNextAt=Infinity;advanceRoom(c,c.endsAt+5000);assert.equal(c.status,'timeout');assert.equal(c.leftMs,0);
+ const w=newRoom({duration:RAID.duration},now);w.members.s1=member();finishRoom(w,'cancelled',now+1000);assert.equal(w.leftMs,RAID.duration,'還沒開戰就結束：顯示完整時間');
+});

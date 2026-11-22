@@ -38,7 +38,10 @@ export function addEvent(s,type,text,now,extra={}){s.sequence++;s.events.unshift
 export function newRoom(config,now){return {...config,status:'waiting',createdAt:now,sequence:0,members:{},shield:100,maxShield:100,hp:0,maxHp:0,endsAt:null,nextAttackAt:null,pausedAt:null,events:[],outbox:[],rankings:null,stunUntil:0,drumUntil:0,guardCharges:0,poisons:[],poisonNextAt:null};}
 export function rank(s,field){const order=field==='damage'?'damageOrder':'healOrder';return Object.values(s.members).filter(m=>m[field]>0).sort((a,b)=>b[field]-a[field]||a[order]-b[order]||a.joinOrder-b.joinOrder).slice(0,10).map((m,i)=>({id:m.id,name:m.name,partner:m.partner,nickname:m.nickname,value:m[field],rank:i+1}));}
 export function finishRoom(s,status,now){
- if(!live(s.status))return;s.status=status;s.finishedAt=now;s.rankings={damage:rank(s,'damage'),heal:rank(s,'heal')};
+ if(!live(s.status))return;
+ // 結束時把剩餘時間定格（暫停中結束就以暫停那一刻計算），結算畫面不再倒數。
+ s.leftMs=s.endsAt?Math.max(0,s.endsAt-(s.status==='paused'&&s.pausedAt?s.pausedAt:now)):s.duration;
+ s.status=status;s.finishedAt=now;s.rankings={damage:rank(s,'damage'),heal:rank(s,'heal')};
  addEvent(s,'finish',({won:'魔王被擊敗！全班一起守住了這裡。',lost:'護盾歸零，本次討伐結束。',timeout:'時間到，謝謝每一位夥伴的努力。',cancelled:'老師已提前結束本次討伐。'})[status],now);
  for(const m of Object.values(s.members)){
   const damageRank=s.rankings.damage.find(r=>r.id===m.id)?.rank||null,healRank=s.rankings.heal.find(r=>r.id===m.id)?.rank||null;

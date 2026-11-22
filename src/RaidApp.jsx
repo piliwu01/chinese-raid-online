@@ -26,7 +26,7 @@ export default function RaidApp({user,banks,cloud,onRefresh,onExit}){
  const action=(name,body={})=>perform(`/raid/${room.code}/${name}`,body);
  // Retain a fixed clock offset between snapshots instead of moving the offset each render.
  const offset=useRef(0);useEffect(()=>{if(room)offset.current=room.serverNow-Date.now();},[room?.serverNow]);
- const now=room?.status==='paused'?room.pausedAt:tick+offset.current,remaining=room?.endsAt?Math.min(Math.ceil(room.duration/1000),Math.ceil((room.endsAt-now)/1000)):Math.ceil((room?.duration||600000)/1000),strike=room?.nextAttackAt?Math.min(40,Math.max(0,Math.ceil((room.nextAttackAt-Math.max(now,room.stunUntil||0))/1000))):40;
+ const now=room?.status==='paused'?room.pausedAt:tick+offset.current,remaining=room&&!live(room.status)?Math.max(0,Math.ceil((room.leftMs??(room.endsAt&&room.finishedAt?room.endsAt-room.finishedAt:0))/1000)):room?.endsAt?Math.min(Math.ceil(room.duration/1000),Math.ceil((room.endsAt-now)/1000)):Math.ceil((room?.duration||600000)/1000),strike=room?.nextAttackAt?Math.min(40,Math.max(0,Math.ceil((room.nextAttackAt-Math.max(now,room.stunUntil||0))/1000))):40;
  const q=room?.me?.question,questionSeconds=q?Math.min(q.timeLimit,Math.max(0,Math.ceil((q.expires-now)/1000))):0;
  const shownOptions=useShuffledOptions(room||{},q);
  const refreshed=useRef('');useEffect(()=>{if(room&&!live(room.status)&&room.pendingRewards===0&&refreshed.current!==room.code){refreshed.current=room.code;onRefresh().catch(()=>{});}},[room?.code,room?.status,room?.pendingRewards]);
