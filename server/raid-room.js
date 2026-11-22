@@ -1,7 +1,7 @@
 import {DurableObject} from 'cloudflare:workers';
 import {RAID,newRoom,advanceRoom,startRoom,pauseRoom,resumeRoom,finishRoom,recordHit,useSkill,useRaidItem,addEvent,raidError,live,currentWeakness,classComboStatus} from '../shared/raid-rules.js';
 import {publicSkill} from '../shared/raid-skills.js';
-import {categorize,weaknessPool} from '../shared/play.js';import {visibleWeak} from '../shared/breakboost.js';
+import {categorize,weaknessPool} from '../shared/play.js';import {visibleWeak} from '../shared/breakboost.js';import {shuffleQuestion} from '../shared/option-shuffle.js';
 import {generateMathProblem} from '../shared/questions.js';import {publicQuestion} from '../shared/game.js';import {settleRaidAward} from './raid-awards.js';import {sha} from './auth.js';
 import {consumeRaidItem} from './inventory.js';
 import {taunt,summarizeStats,analyze,AI_LIMIT} from './ai.js';
@@ -36,7 +36,7 @@ export class RaidRoom extends DurableObject{
  async loadBank(s){if(s.bankId==='math-auto')return null;if(this.bank?.bankId===s.bankId)return this.bank;const row=await this.env.DB.prepare('SELECT data FROM banks WHERE id=?').bind(s.bankId).first();if(!row)raidError('原題庫已不存在。',409);this.bank=JSON.parse(row.data);return this.bank;}
  async nextQuestion(s,m,now){
   if(m.question)return;m.feedback=null;const bank=await this.loadBank(s);let q;
-  if(bank){const active=bank.questions.filter(x=>x.status==='active');if(!active.length)raidError('沒有有效題目。');if(!m.deck?.length){m.deck=active.map(x=>x.id);for(let i=m.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[m.deck[i],m.deck[j]]=[m.deck[j],m.deck[i]];}}const pickedId=m.deck.pop();const x=active.find(x=>x.id===pickedId);q={question:x.stem,answer:x.answer,questionId:x.id,difficulty:x.difficulty||'medium',category:categorize(x),options:['A','B','C','D'],optionTexts:x.options,explanation:x.explanation,sourceRef:x.sourceRef};}
+  if(bank){const active=bank.questions.filter(x=>x.status==='active');if(!active.length)raidError('沒有有效題目。');if(!m.deck?.length){m.deck=active.map(x=>x.id);for(let i=m.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[m.deck[i],m.deck[j]]=[m.deck[j],m.deck[i]];}}const pickedId=m.deck.pop();const x=active.find(x=>x.id===pickedId);q={question:x.stem,answer:x.answer,questionId:x.id,difficulty:x.difficulty||'medium',category:categorize(x),options:['A','B','C','D'],optionTexts:x.options,explanation:x.explanation,sourceRef:x.sourceRef};q=shuffleQuestion(q);}
   else q=generateMathProblem('medium');
   m.question={...q,id:crypto.randomUUID(),timeLimit:bank?.timeLimitSeconds||30,expires:now+(bank?.timeLimitSeconds||30)*1000};
  }
@@ -94,7 +94,7 @@ export class RaidRoom extends DurableObject{
     else if(path==='/answer'){
      const q=m.question;if(!q||q.id!==b.questionId)raidError('這題已結束，請取得最新戰況。',409);if(b.choice!==null&&!q.options.includes(b.choice))raidError('答案不在選項中。');
      const correct=b.choice!==null&&now<=q.expires&&b.choice===q.answer;
-     event={questionId:q.id,correct,answerText:q.optionTexts?.[q.answer]??String(q.answer),explanation:q.explanation||'慢慢檢查運算步驟，再試一次。',bankId:s.bankId,sourceId:q.questionId,timedOut:b.choice===null||now>q.expires};m.feedback=event;m.question=null;recordStat(s,q,correct);
+     event={questionId:q.id,correct,answerText:q.optionTexts?.[q.answer]??String(q.answer),explanation:q.explanation||'慢慢檢查運算步驟，再試一次。',bankId:s.bankId,sourceId:q.questionId,order:q.shuffled||null,timedOut:b.choice===null||now>q.expires};m.feedback=event;m.question=null;recordStat(s,q,correct);
      s.outbox.push({id:`raid_${s.code}_${m.id}_${q.id}`,kind:'answer',userId:m.id,bankId:s.bankId,question:{question:q.question,answer:q.answer,questionId:q.questionId,category:q.category||''},correct,at:now});recordHit(s,m,correct,now,q.difficulty,q.category);
     }else if(path==='/item'){
      const proposed=structuredClone(s),event=useRaidItem(proposed,proposed.members[actor.id],b.itemId,now);

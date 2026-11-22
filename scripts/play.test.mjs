@@ -32,8 +32,8 @@ test('wrong bank answers hatch one ink monster per question; it sleeps until tom
  const nest=publicState(s,now).inkNest;assert(nest.length>=1&&nest.length<=3);assert(nest.every(m=>!m.ready));assert.equal(new Set(nest.map(m=>m.id)).size,nest.length);
  const target=nest[0];assert.throws(()=>applyAction(s,'/ink/start',{inkId:target.id,bankId:'fixture'},now,bank),/沉睡/);
  const food=s.food,xp=s.growth.xp;const start=applyAction(s,'/ink/start',{inkId:target.id,bankId:'fixture'},tomorrow,bank);assert(start.question.question);
- const wrong=applyAction(s,'/ink/answer',{questionId:s.inkFight.id,choice:'B'},tomorrow,bank);assert.equal(wrong.correct,false);assert(s.inkNest.some(m=>m.id===target.id));assert.equal(publicState(s,tomorrow).inkNest.find(m=>m.id===target.id).ready,false);
- const later=tomorrow+86400000;applyAction(s,'/ink/start',{inkId:target.id,bankId:'fixture'},later,bank);const ok=applyAction(s,'/ink/answer',{questionId:s.inkFight.id,choice:'A'},later,bank);
+ const wrong=applyAction(s,'/ink/answer',{questionId:s.inkFight.id,choice:s.inkFight.answer==='A'?'B':'A'},tomorrow,bank);assert.equal(wrong.correct,false);assert(s.inkNest.some(m=>m.id===target.id));assert.equal(publicState(s,tomorrow).inkNest.find(m=>m.id===target.id).ready,false);
+ const later=tomorrow+86400000;applyAction(s,'/ink/start',{inkId:target.id,bankId:'fixture'},later,bank);const ok=applyAction(s,'/ink/answer',{questionId:s.inkFight.id,choice:s.inkFight.answer},later,bank);
  assert.equal(ok.correct,true);assert(!s.inkNest.some(m=>m.id===target.id));assert.equal(s.food,food+INK.food);assert.equal(s.growth.xp,xp+INK.xp);
  const x={};assert.equal(addInk(x,'math-auto','q','s','d'),false);assert.equal(x.inkNest,undefined);
 });

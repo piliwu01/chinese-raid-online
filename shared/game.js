@@ -25,6 +25,7 @@ import {ownedSpirit} from './ownership.js';
 import {categorize,comboMultiplier,SHINY_RATE,bumpQuest,questState,publicQuests,QUESTS,addInk,inkReady,publicInk,INK,earnedTitles,setProgress} from './play.js';
 import {MAX_XP} from '../src/growth.js';
 import {claimCollection,publicCollection} from './collection.js';
+import {shuffleQuestion} from './option-shuffle.js';
 import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak,LATENT,gainLatent,checkAwaken} from './breakboost.js';
 
 export {taipeiDate};
@@ -38,11 +39,11 @@ export function publicState(s,now=Date.now()){migrateState(s);const dupes=public
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;
- if(bank){const pool=bank.questions.filter(x=>x.status==='active');if(!pool.length)fail('這份題庫沒有可使用的題目。'); const x=pickBankQuestion(st,bank,diff); q={question:x.stem,answer:x.answer,options:['A','B','C','D'],optionTexts:x.options,explanation:x.explanation,sourceRef:x.sourceRef,questionId:x.id,category:categorize(x)};}
+ if(bank){const pool=bank.questions.filter(x=>x.status==='active');if(!pool.length)fail('這份題庫沒有可使用的題目。'); const x=pickBankQuestion(st,bank,diff); q=shuffleQuestion({question:x.stem,answer:x.answer,options:['A','B','C','D'],optionTexts:x.options,explanation:x.explanation,sourceRef:x.sourceRef,questionId:x.id,category:categorize(x)});}
  else q=generateMathProblem(diff);
  return {...q,id:crypto.randomUUID(),bankId:bank?.bankId||'math-auto',timeLimit:bank?.timeLimitSeconds||({easy:10,medium:12,hard:15}[diff]||18),expires:now+(bank?.timeLimitSeconds||({easy:10,medium:12,hard:15}[diff]||18))*1000};
 }
-function resolve(q,choice,now){if(choice!==null&&!q.options.includes(choice))fail('答案不在選項中。');return {correct:choice!==null&&now<=q.expires&&choice===q.answer,question:q.question,answer:q.answer,answerText:q.optionTexts?.[q.answer]??String(q.answer),explanation:q.explanation||'仔細檢查運算步驟，再試一次。',sourceRef:q.sourceRef||'',bankId:q.bankId,sourceId:q.questionId,timedOut:now>q.expires||choice===null};}
+function resolve(q,choice,now){if(choice!==null&&!q.options.includes(choice))fail('答案不在選項中。');return {correct:choice!==null&&now<=q.expires&&choice===q.answer,question:q.question,answer:q.answer,answerText:q.optionTexts?.[q.answer]??String(q.answer),explanation:q.explanation||'仔細檢查運算步驟，再試一次。',sourceRef:q.sourceRef||'',bankId:q.bankId,sourceId:q.questionId,order:q.shuffled||null,timedOut:now>q.expires||choice===null};}
 export function applyAction(s,route,b,now,bank=null){
  migrateState(s);
  const today=taipeiDate(now); let event={};

@@ -1,3 +1,4 @@
+import {remapLetters} from '../shared/option-shuffle.js';
 // Groq AI helpers: model pick, chat, cached explanations, boss taunts, class analysis.
 // The key lives in Cloudflare Secrets Store (binding GROQ_KEY); never sent to the browser.
 import {taipeiDate} from '../shared/game.js';
@@ -56,13 +57,15 @@ export async function explain(env,user,body){
   if(!m)throw aiError('答錯的題目要過幾秒才會送進墨漬怪巢穴，請稍等一下再按。',409);
   if(inkReady(m,taipeiDate(Date.now())))throw aiError('這隻墨漬怪已經醒來了，先自己挑戰淨化，答錯後再請小老師說明。',403);
  }
- const cacheKey=`explain:${bankId}:${questionId}`;const cached=await cacheGet(db,cacheKey);if(cached)return {text:cached,cached:true};
+ // 選項每次會打亂：AI 說明用題庫原本的字母，回傳前換成學生畫面上的字母。
+ const order=/^[ABCD]{4}$/.test(String(body.order||''))&&new Set(String(body.order)).size===4?String(body.order):'ABCD',toShown={};[...order].forEach((old,i)=>{toShown[old]='ABCD'[i];});const shown=t=>remapLetters(t,toShown);
+ const cacheKey=`explain:${bankId}:${questionId}`;const cached=await cacheGet(db,cacheKey);if(cached)return {text:shown(cached),cached:true};
  const day=taipeiDate(Date.now());
  const used=(await db.prepare('INSERT INTO ai_usage(user_id,day,count) VALUES(?,?,1) ON CONFLICT(user_id,day) DO UPDATE SET count=count+1 RETURNING count').bind(user.id,day).first()).count;
  if(user.role!=='teacher'&&used>AI_LIMIT.explainPerDay)throw aiError(`今天已經問了 ${AI_LIMIT.explainPerDay} 次，明天再來問小老師吧！`,429);
  const row=await db.prepare('SELECT data FROM banks WHERE id=?').bind(bankId).first();if(!row)throw aiError('找不到這份題庫。',404);
  const x=JSON.parse(row.data).questions.find(q=>q.id===questionId);if(!x)throw aiError('找不到這一題。',404);
- const text=await chat(env,explainPrompt(x),450,.5);await cachePut(db,cacheKey,text);return {text,cached:false};
+ const text=await chat(env,explainPrompt(x),450,.5);await cachePut(db,cacheKey,text);return {text:shown(text),cached:false};
 }
 
 const TAUNT_SCENE={start:'討伐剛開始，全班準備向你進攻',boss:'你剛對全班發動反擊，打掉他們的護盾',phase:'你的血量剩一半，進入暴走狀態，渾身冒出紅色墨焰',ultimate:'全班同時答對發動合體大招，你被打得暈頭轉向',low:'你的血量快見底了，但還在逞強'};

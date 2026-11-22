@@ -9,7 +9,7 @@ export default function AiTutor({feedback}){
  const [state,setState]=useState({key:'',text:'',error:'',busy:false});
  useEffect(()=>{setState({key,text:'',error:'',busy:false});},[key]);
  if(!feedback||feedback.correct||!bankId||bankId==='math-auto'||!sourceId)return null;
- const ask=async()=>{setState(s=>({...s,busy:true,error:''}));try{const r=await api('/ai/explain',{bankId,questionId:sourceId});setState(s=>({...s,busy:false,text:r.text}));}catch(e){setState(s=>({...s,busy:false,error:e.message}));}};
+ const ask=async()=>{setState(s=>({...s,busy:true,error:''}));try{const r=await api('/ai/explain',{bankId,questionId:sourceId,order:feedback.order||undefined});setState(s=>({...s,busy:false,text:r.text}));}catch(e){setState(s=>({...s,busy:false,error:e.message}));}};
  return <div className="ai-tutor">
   {state.text?<div className="ai-tutor-answer"><span className="ai-tutor-label"><Bot size={15}/>AI 小老師</span><p>{state.text}</p><small>AI 說明僅供參考，以課本與老師說明為準。</small></div>
   :<button type="button" className="ai-tutor-button" disabled={state.busy} onClick={ask}>{state.busy?<LoaderCircle size={16} className="spin"/>:<Bot size={16}/>}{state.busy?'小老師思考中…':'還是不懂？問 AI 小老師'}</button>}
