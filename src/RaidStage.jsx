@@ -1,7 +1,7 @@
 import SceneBg from './SceneBg.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {SkillBanner} from './BossSkill.jsx';
-import {BossIntro,SkillSweep} from './RaidFx.jsx';
+import {BossIntro,SkillSweep,BossShieldBar,BreakSweep} from './RaidFx.jsx';
 import {Swords,Shield,Heart,Clock,Zap,Users} from 'lucide-react';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
@@ -77,11 +77,11 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
    <RaidStatuses room={room} now={now}/>
-   <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BossIntro room={room} now={now}/>
+   <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BreakSweep room={room} now={now}/><BossIntro room={room} now={now}/>
    <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''}`}>
     <div className="stage-boss-aura"/><div className="stage-boss-shadow"/>
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
-    <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3></div>
+    <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3><BossShieldBar room={room} now={now}/></div>
     {taunt&&<div key={taunt.key} className="boss-taunt" role="status">{taunt.text}</div>}
     {room.stunUntil>now&&<span className="boss-condition">💫 暈眩中</span>}
     {room.poisonTicks>0&&<span className="boss-poison">毒霧侵蝕中</span>}
@@ -119,12 +119,12 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
 }
 
 // 學生畫面頂端的固定戰況條：魔王頭像與剩餘血量、我造成的傷害與修復的護盾。往下捲也一直看得到。
-export function MyRaidStrip({room}){
+export function MyRaidStrip({room,now}){
  const me=room.me||{},pct=room.maxHp?Math.max(0,room.hp/room.maxHp*100):100;
  return <div className={`my-raid-strip ${room.phase===2?'is-enraged':''}`} role="status" aria-label="魔王血量與我的貢獻">
   <img className="mrs-boss" src="/assets/boss.png" alt="魔王墨卷魔神"/>
   <div className="mrs-hp"><div className="mrs-name"><strong>墨卷魔神</strong>{room.phase===2&&<em>暴走</em>}<span><b>{room.hp.toLocaleString()}</b> / {room.maxHp.toLocaleString()}</span></div>
-   <div className="raid-meter boss-meter" role="progressbar" aria-label="魔王剩餘血量" aria-valuemin={0} aria-valuemax={room.maxHp||1} aria-valuenow={room.hp}><span style={{width:`${pct}%`}}/></div></div>
+   <div className="raid-meter boss-meter" role="progressbar" aria-label="魔王剩餘血量" aria-valuemin={0} aria-valuemax={room.maxHp||1} aria-valuenow={room.hp}><span style={{width:`${pct}%`}}/></div><BossShieldBar room={room} now={now} compact/></div>
   <div className="mrs-me"><span className="mrs-dmg"><Swords size={14}/>我的傷害<b key={`d${me.damage}`}>{(me.damage||0).toLocaleString()}</b></span><span className="mrs-heal"><Heart size={14}/>我的修復<b key={`h${me.heal}`}>{(me.heal||0).toLocaleString()}</b></span></div>
  </div>;
 }

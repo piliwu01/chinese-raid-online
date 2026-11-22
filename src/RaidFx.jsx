@@ -51,3 +51,43 @@ export function SkillSweep({ room, now, compact = false }) {
     </div>
   );
 }
+
+// 魔王護盾（全班共用）：護盾條、破盾題型；破盾中顯示倒數。
+export function BossShieldBar({ room, now, compact = false }) {
+  const b = room.bossShield;
+  if (!b || !['active', 'paused'].includes(room.status)) return null;
+  const broken = b.until > now, settling = !broken && b.until > 0, left = broken ? 0 : settling ? b.max : b.left;
+  return (
+    <div className={`boss-shield ${compact ? 'is-compact' : ''} ${broken ? 'is-broken' : ''}`} role="status" aria-label={broken ? '魔王破盾中' : `魔王護盾 ${left} / ${b.max}`}>
+      <span className="bs-label">{broken ? '破盾！' : '魔王護盾'}</span>
+      <span className="bs-track"><i style={{ width: `${(left / b.max) * 100}%` }} /></span>
+      {broken
+        ? <b className="bs-count">全班傷害 ×2 · {Math.min(10, Math.max(0, Math.ceil((b.until - now) / 1000)))} 秒</b>
+        : settling ? <b className="bs-count">護盾恢復中…</b>
+        : <><b className="bs-count">{left} / {b.max}</b><span className="bs-weak">破盾題型 {b.weak.map(c => <em key={c}>{c}</em>)}</span></>}
+    </div>
+  );
+}
+
+// 有人擊破魔王護盾的瞬間：金色斜長條「破盾！BREAK」。
+export function BreakSweep({ room, now, compact = false }) {
+  const [fx, setFx] = useState(null), seen = useRef(null);
+  const ev = room.events?.find(e => e.type === 'break');
+  useEffect(() => {
+    if (!ev || seen.current === ev.sequence) return;
+    const first = seen.current === null; seen.current = ev.sequence;
+    if (first && now - ev.at > 2000) return; // 中途打開畫面：不補播
+    if (now - ev.at > 4000) return;
+    setFx({ key: ev.sequence, name: room.members.find(m => m.id === ev.actorId)?.name || '' });
+  }, [ev?.sequence]);
+  useEffect(() => { if (!fx) return; const t = setTimeout(() => setFx(null), reduced() ? 1500 : SWEEP_MS); return () => clearTimeout(t); }, [fx?.key]);
+  if (!fx) return null;
+  return (
+    <div className={`skill-sweep is-break ${compact ? 'is-compact' : ''}`} key={fx.key} role="alert">
+      <div className="sweep-band">
+        <span className="sweep-icon" aria-hidden="true">💥</span>
+        <div className="sweep-text"><small>{fx.name ? `${fx.name} 擊破魔王護盾` : '魔王護盾被擊破'}</small><strong>破盾！全班傷害 ×2</strong></div>
+      </div>
+    </div>
+  );
+}

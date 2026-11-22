@@ -19,6 +19,7 @@ export function scoreRows(room) {
       const lv = m.contrib > 0 && max > 0 ? Math.max(1, Math.min(9, 1 + Math.round((8 * m.contrib) / max))) : 1;
       const tags = [
         room.finisherId === m.id && '最後一擊',
+        m.breaks > 0 && `破盾 ×${m.breaks}`,
         topDmg === m.id && '傷害第一',
         topHeal === m.id && '守護第一',
         m.answered >= 3 && m.correct === m.answered && '全對',
@@ -43,6 +44,7 @@ export default function RaidScoreboard({ room, user }) {
     `限時 ${Math.round(room.duration / 60000)} 分鐘`,
     `答對攻擊 ${attacks} 次`,
     st.ultimate ? `合體大招 ${st.ultimate} 次` : null,
+    st.break ? `破盾 ${st.break} 次` : null,
     `魔王反擊 ${st.boss || 0} 次`,
     `魔王剩 ${room.hp.toLocaleString()} 血`,
   ].filter(Boolean);

@@ -8,6 +8,26 @@ export function currentWeakness(s,now){
  const at=s.status==='paused'&&s.pausedAt?s.pausedAt:now,slot=Math.max(0,Math.floor((at-s.weakStart)/PHASE2.weakEvery));
  return {category:s.weakPool[(slot+(s.weakOffset||0))%s.weakPool.length],until:s.weakStart+(slot+1)*PHASE2.weakEvery};
 }
+// 魔王護盾（全班共用，2026-11-22）：題庫中有 2 種「破盾題型」，全班答對這兩種題型時護盾 -1；
+// 護盾歸零即「破盾」：10 秒內全班答題傷害 ×2。時間到護盾回滿，並換一組破盾題型。護盾點數＝參戰人數（4～30）。
+// 墨甲護體期間答對只會打墨甲，不扣護盾。沒有題型分類的題庫（自動數學）沒有魔王護盾。
+export const RAID_BREAK={window:10000,weakCount:2,min:4,max:30,mult:2};
+function pickBreakWeak(pool,prev,random=Math.random){
+ const pick=()=>{const a=[...pool];for(let i=a.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a.slice(0,Math.min(RAID_BREAK.weakCount,a.length));};
+ let w=pick();for(let i=0;i<5&&prev&&pool.length>RAID_BREAK.weakCount&&w.every(c=>prev.includes(c));i++)w=pick();return w;
+}
+export function initBreak(s,random=Math.random){
+ const pool=s.weakPool||[];if(!pool.length){s.bossShield=null;return;}
+ const max=Math.max(RAID_BREAK.min,Math.min(RAID_BREAK.max,Object.keys(s.members||{}).length));
+ s.bossShield={max,left:max,weak:pickBreakWeak(pool,null,random),until:0,count:0};
+}
+export const breakActive=(s,now)=>!!(s.bossShield&&s.bossShield.until>now);
+// 破盾時間結束：護盾回滿、換破盾題型。回傳是否有變動。
+export function settleBreak(s,now,random=Math.random){
+ const b=s.bossShield;if(!b||!b.until||b.until>now)return false;
+ b.until=0;b.left=b.max;b.weak=pickBreakWeak(s.weakPool||b.weak,b.weak,random);
+ addEvent(s,'shield',`魔王護盾恢復了！新的破盾題型：${b.weak.join('、')}`,now,{weak:b.weak});return true;
+}
 export function checkPhase(s,now){
  if(s.phase===2||s.hp<=0||!s.maxHp||s.hp>s.maxHp/2)return;
  s.phase=2;s.attackEvery=PHASE2.attackEvery;s.weakStart=now;s.weakOffset=Math.floor(Math.random()*Math.max(1,s.weakPool?.length||1));
@@ -51,25 +71,27 @@ export function finishRoom(s,status,now){
  }
 }
 export function advanceRoom(s,now){
- if(s.status!=='active')return false;let changed=advanceSkills(s,now,addEvent);
+ if(s.status!=='active')return false;let changed=advanceSkills(s,now,addEvent);if(settleBreak(s,now))changed=true;
  while(true){const poisonTime=s.poisons?.length?s.poisonNextAt:Infinity,time=Math.min(s.nextAttackAt,poisonTime);if(time>now||time>=s.endsAt)break;changed=true;
   if(poisonTime<=s.nextAttackAt){const dose=s.poisons[0],m=s.members[dose.actorId];dose.ticks--;if(dose.ticks===0)s.poisons.shift();s.poisonNextAt=s.poisons.length?time+5000:null;const amount=skillActive(s,'ward')?0:Math.min(10,s.hp);s.hp-=amount;m.damage+=amount;addEvent(s,'poison',`${m.name}的毒霧造成 ${amount} 點傷害`,time,{actorId:m.id,value:amount});m.damageOrder=s.sequence;checkPhase(s,time);if(s.hp===0){finishRoom(s,'won',time);return true;}}
   else {s.nextAttackAt+=s.attackEvery||RAID.attackEvery;const guarded=(s.guardCharges||0)>0;if(guarded)s.guardCharges--;const amount=Math.round(RAID.bossDamage*(s.phase===2?PHASE2.damageMult:1))-(guarded?5:0);s.shield=Math.max(0,s.shield-amount);addEvent(s,'boss',`魔王反擊！全班護盾 −${amount}${guarded?'（守護結晶減傷 5 點）':''}`,time);if(s.shield===0){finishRoom(s,'lost',time);return true;}}
  }
  if(now>=s.endsAt){finishRoom(s,'timeout',s.endsAt);changed=true;}return changed;
 }
-export function startRoom(s,now){if(s.status!=='waiting')raidError('房間已開始或結束。',409);const n=Object.keys(s.members).length;if(!n)raidError('至少要有 1 位學生加入。');s.status='active';s.maxHp=s.hp=s.customHp||n*RAID.hpPerPlayer;s.endsAt=now+s.duration;s.nextAttackAt=now+RAID.attackEvery;initSkills(s,now);addEvent(s,'start',`${n} 位冒險者集結，討伐開始！`,now);}
+export function startRoom(s,now){if(s.status!=='waiting')raidError('房間已開始或結束。',409);const n=Object.keys(s.members).length;if(!n)raidError('至少要有 1 位學生加入。');s.status='active';s.maxHp=s.hp=s.customHp||n*RAID.hpPerPlayer;s.endsAt=now+s.duration;s.nextAttackAt=now+RAID.attackEvery;initSkills(s,now);initBreak(s);addEvent(s,'start',`${n} 位冒險者集結，討伐開始！`,now);}
 export function pauseRoom(s,now){advanceRoom(s,now);if(s.status!=='active')raidError('目前無法暫停。',409);s.status='paused';s.pausedAt=now;addEvent(s,'pause','老師暫停了討伐，計時與題目一起休息。',now);}
-export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前沒有暫停。',409);const delay=now-s.pausedAt;s.endsAt+=delay;s.nextAttackAt+=delay;if(s.poisonNextAt)s.poisonNextAt+=delay;for(const field of ['stunUntil','drumUntil','comboCooldownUntil'])if(s[field]>s.pausedAt)s[field]+=delay;if(s.weakStart)s.weakStart+=delay;if(s.comboHits)s.comboHits=s.comboHits.map(t=>t+delay);shiftSkills(s,delay,s.pausedAt);for(const m of Object.values(s.members))if(m.question)m.question.expires+=delay;s.status='active';s.pausedAt=null;addEvent(s,'resume','大家準備好了，繼續討伐！',now);}
+export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前沒有暫停。',409);const delay=now-s.pausedAt;s.endsAt+=delay;s.nextAttackAt+=delay;if(s.poisonNextAt)s.poisonNextAt+=delay;for(const field of ['stunUntil','drumUntil','comboCooldownUntil'])if(s[field]>s.pausedAt)s[field]+=delay;if(s.weakStart)s.weakStart+=delay;if(s.bossShield?.until>s.pausedAt)s.bossShield.until+=delay;if(s.comboHits)s.comboHits=s.comboHits.map(t=>t+delay);shiftSkills(s,delay,s.pausedAt);for(const m of Object.values(s.members))if(m.question)m.question.expires+=delay;s.status='active';s.pausedAt=null;addEvent(s,'resume','大家準備好了，繼續討伐！',now);}
 export function recordHit(s,m,correct,now,difficulty,category=''){
  m.answered++;const dk=['easy','medium','hard'].includes(difficulty)?difficulty:'medium';m.diff=m.diff||{};m.diff[dk]=m.diff[dk]||[0,0];m.diff[dk][1]++;if(correct)m.diff[dk][0]++;
  if(!correct){m.combo=0;if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
- const warded=skillActive(s,'ward');
- const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*comboMultiplier(m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
+ const warded=skillActive(s,'ward');settleBreak(s,now);const broken=breakActive(s,now);
+ const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult:1)*comboMultiplier(m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
  if(warded){const left=s.skill.wardLeft-1;addEvent(s,'ward-hit',`${m.name}擊中墨甲！還需答對 ${Math.max(0,left)} 題`,now,{actorId:m.id});wardAbsorb(s,now,1,addEvent,()=>stunBoss(s,now));}
- else {const tags=`${isWeak?'弱點命中！':''}${difficulty==='hard'?'難題命中！':''}${m.combo>=3?`${m.combo} 連擊！`:''}`;
- addEvent(s,'hit',`${tags}${m.name}與${m.nickname||m.partner.zhName}造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage,hard:difficulty==='hard',weak:isWeak,combo:m.combo});m.damageOrder=s.sequence;}
+ else {const bs=s.bossShield,shieldHit=!broken&&!!bs&&!!category&&bs.weak.includes(category);if(shieldHit)bs.left=Math.max(0,bs.left-1);
+ const tags=`${broken?'破盾加倍！':''}${isWeak?'弱點命中！':''}${difficulty==='hard'?'難題命中！':''}${m.combo>=3?`${m.combo} 連擊！`:''}`;
+ addEvent(s,'hit',`${tags}${m.name}與${m.nickname||m.partner.zhName}造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage,hard:difficulty==='hard',weak:isWeak,combo:m.combo,shieldHit,broken});m.damageOrder=s.sequence;
+ if(shieldHit&&bs.left===0&&s.hp>0){bs.until=now+RAID_BREAK.window;bs.count++;m.breaks=(m.breaks||0)+1;addEvent(s,'break',`${m.name}擊破魔王護盾！全班 10 秒內傷害 ×2`,now,{actorId:m.id,until:bs.until});}}
  if(m.charges<RAID.maxCharges){m.energy++;if(m.energy===RAID.energyEvery){m.energy=0;m.charges++;}}
  checkPhase(s,now);if(s.hp===0){finishRoom(s,'won',now);return;}
  if(now>=(s.comboCooldownUntil||0)){s.comboHits=[...(s.comboHits||[]).filter(t=>now-t<CLASS_COMBO.window),now];if(s.comboHits.length>=classComboNeed(Object.keys(s.members).length))classUltimate(s,now);}

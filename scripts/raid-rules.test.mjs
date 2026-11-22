@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {RAID,PHASE2,newRoom,startRoom,advanceRoom,pauseRoom,resumeRoom,recordHit,useSkill,finishRoom,rank} from '../shared/raid-rules.js';
+import test from 'node:test';import assert from 'node:assert/strict';import {RAID,PHASE2,newRoom,startRoom,advanceRoom,pauseRoom,resumeRoom,recordHit,useSkill,finishRoom,rank,RAID_BREAK,breakActive} from '../shared/raid-rules.js';
 const now=1000000;const member=(id='s1')=>({id,name:id,partner:{id:2010,zhName:'夔'},nickname:'搭檔',joinOrder:Number(id.replace(/\D/g,''))||0,damage:0,heal:0,charges:0,energy:0,correct:0,answered:0,damageOrder:0,healOrder:0,question:null});
 const room=()=>{const s=newRoom({code:'ABC234',hostId:'teacher',className:'313',duration:RAID.duration,customHp:10000},now);s.members.s1=member();startRoom(s,now);return s;};
 test('specified ten-minute and forty-second defaults',()=>{const automatic=newRoom({duration:RAID.duration},now);for(let i=0;i<30;i++)automatic.members['s'+i]=member('s'+i);startRoom(automatic,now);assert.equal(automatic.hp,9000);assert.equal(automatic.maxHp,9000);const s=room();assert.equal(s.hp,10000);assert.equal(s.endsAt,now+600000);advanceRoom(s,now+39999);assert.equal(s.shield,100);advanceRoom(s,now+40000);assert.equal(s.shield,90);assert.equal(s.events[0].type,'boss');});
@@ -28,4 +28,22 @@ test('scoreboard data: per-difficulty record, best combo, event counts and the f
  recordHit(s,m,true,now,'easy');recordHit(s,m,false,now,'hard');recordHit(s,m,true,now,'medium');recordHit(s,m,true,now,'medium');
  assert.deepEqual(m.diff.easy,[1,1]);assert.deepEqual(m.diff.hard,[0,1]);assert.equal(m.bestCombo,2);
  assert.equal(s.status,'won');assert.equal(s.finisherId,'s1');assert.equal(s.stats.hit,3);assert.equal(s.stats.start,1);
+});
+
+test('class-wide boss shield: weak-category hits break it, broken window doubles damage, then it refills with new categories',()=>{
+ const s=newRoom({code:'BRK234',hostId:'t',className:'313',duration:RAID.duration,customHp:100000},now);for(let i=1;i<=5;i++)s.members['s'+i]=member('s'+i);
+ s.weakPool=['成語','修辭','對聯','字音字形'];startRoom(s,now);s.comboCooldownUntil=Infinity;s.nextAttackAt=Infinity;s.skillNextAt=Infinity;
+ const b=s.bossShield;assert.equal(b.max,5);assert.equal(b.left,5);assert.equal(b.weak.length,2);
+ const weak=b.weak[0],other=s.weakPool.find(c=>!b.weak.includes(c)),m=s.members.s1;
+ recordHit(s,m,true,now,'medium',other);assert.equal(b.left,5,'非破盾題型不扣盾');
+ recordHit(s,m,false,now,'medium',weak);assert.equal(b.left,5,'答錯不扣盾');
+ for(let i=0;i<4;i++){m.combo=0;recordHit(s,s.members['s'+(i+1)],true,now,'medium',weak);}assert.equal(b.left,1);
+ s.members.s5.combo=0;recordHit(s,s.members.s5,true,now,'medium',weak);assert.equal(b.left,0);assert.ok(breakActive(s,now));assert.equal(s.events[0].type,'break');assert.equal(s.members.s5.breaks,1);
+ const before=s.members.s2.damage;s.members.s2.combo=0;recordHit(s,s.members.s2,true,now+1000,'medium',other);assert.equal(s.members.s2.damage-before,10*RAID_BREAK.mult,'破盾中全班傷害 ×2');assert.equal(b.left,0,'破盾中不再扣盾');
+ const old=[...b.weak];advanceRoom(s,now+RAID_BREAK.window+1);assert.ok(!breakActive(s,now+RAID_BREAK.window+1));assert.equal(b.left,5,'時間到回滿');assert.notDeepEqual([...b.weak].sort(),old.sort(),'換一組破盾題型');
+});
+test('boss shield: none for banks without categories, size clamps, and pause extends the broken window',()=>{
+ const a=room();assert.equal(a.bossShield,null);
+ const s=newRoom({code:'BRK235',hostId:'t',className:'313',duration:RAID.duration,customHp:100000},now);s.members.s1=member();s.weakPool=['成語','修辭'];startRoom(s,now);assert.equal(s.bossShield.max,RAID_BREAK.min);
+ s.bossShield.until=now+5000;pauseRoom(s,now+1000);resumeRoom(s,now+61000);assert.equal(s.bossShield.until,now+65000);
 });

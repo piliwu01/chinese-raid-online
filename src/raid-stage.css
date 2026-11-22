@@ -252,3 +252,23 @@
  .sb-table .sb-num::before{content:attr(data-label);display:block;font:400 11px system-ui,sans-serif;color:#9fadc2;margin-bottom:2px}
 }
 @media(max-width:700px){.sb-table tr.is-me td{background:none}.sb-table tr.is-me{background:#f2cf7712;border-radius:10px;padding:12px 10px}}
+/* 2026-11-22 全班共用魔王護盾 */
+.boss-shield{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:14px;color:#cfe0f4}
+.bs-label{font-weight:800;color:#9fd2ff;white-space:nowrap}
+.bs-track{flex:1;min-width:90px;height:9px;border-radius:99px;background:#ffffff1a;overflow:hidden}
+.bs-track i{display:block;height:100%;background:linear-gradient(90deg,#6fb7ff,#b4e1ff);transition:width .35s}
+.bs-count{font:700 15px ui-monospace,monospace;color:#d8ecff;white-space:nowrap}
+.bs-weak{display:flex;align-items:center;gap:5px;font-size:13px;color:#b3c4d8;white-space:nowrap}
+.bs-weak em{font-style:normal;font-weight:800;padding:1px 8px;border-radius:99px;background:#6fb7ff26;border:1px solid #6fb7ff88;color:#cfe8ff}
+.boss-shield.is-broken .bs-label,.boss-shield.is-broken .bs-count{color:#ffd76a}
+.boss-shield.is-broken .bs-track{box-shadow:0 0 10px #ffd76a88}
+.boss-shield.is-broken{animation:bsPulse 1s ease-in-out infinite}
+@keyframes bsPulse{50%{filter:brightness(1.35)}}
+.stage-boss-name .boss-shield{font-size:15px;max-width:560px}
+.break-chip{font-style:normal;font-weight:800;padding:2px 9px;border-radius:99px;background:#6fb7ff26;border:1px solid #6fb7ffaa;color:#cfe8ff;margin-left:6px}
+.break-chip.is-on{background:#ffd76a2e;border-color:#ffd76a;color:#ffe49a}
+.skill-sweep.is-break .sweep-band{background:linear-gradient(90deg,transparent,#c98a10ee 12%,#f6c84ff2 50%,#c98a10ee 88%,transparent)!important}
+.skill-sweep.is-break .sweep-text strong,.skill-sweep.is-break .sweep-text small{color:#2a1700!important;text-shadow:none!important}
+@media(max-width:600px){.boss-shield.is-compact{font-size:12px;gap:4px 8px;margin-top:6px}.boss-shield.is-compact .bs-count{font-size:13px}.boss-shield.is-compact .bs-weak{font-size:11px}.boss-shield.is-compact .bs-weak em{padding:0 6px}}
+@media(prefers-reduced-motion:reduce){.boss-shield.is-broken{animation:none}}
+.skill-sweep.is-break .sweep-band{border-color:#ffe08a;box-shadow:0 0 40px #f6c84f99}
