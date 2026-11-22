@@ -15,7 +15,7 @@ export function EnemyShield({ brk }) {
       </div>
       {brk.broken
         ? <p className="break-note">這題答錯也不會被反擊</p>
-        : <div className="hp-break-row break-weak"><span className="break-label">弱點</span>{brk.weak.map(c => <em key={c}>{c}</em>)}</div>}
+        : <div className="hp-break-row break-weak"><span className="break-label">弱點</span>{brk.weak.map((c, i) => c ? <em key={c}>{c}</em> : <em key={'h' + i} className="weak-hidden" title="答對這種題型就會翻開">？？</em>)}</div>}
     </div>
   );
 }

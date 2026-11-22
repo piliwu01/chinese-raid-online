@@ -28,6 +28,7 @@ export function dealCards(cats,weak,random=Math.random){
 export function startBreak(battle,bank,random=Math.random){
  const cats=cardCategories(bank);
  battle.cats=cats;battle.weak=shuffle(cats,random).slice(0,Math.min(BREAK.weakCount,cats.length));
+ battle.revealed=battle.weak.slice(0,1); // 先翻開 1 個弱點，另 1 個要答對才翻開
  battle.maxShield=battle.weak.length?BREAK.shield:0;battle.shield=battle.maxShield;battle.broken=false;
  battle.orbs=BREAK.orbsStart;battle.cards=dealCards(cats,battle.weak,random);
  return battle;
@@ -54,6 +55,8 @@ export function bankForCard(bank,card){
 export function resolveBreak(battle,{correct,boost=0,category=null,random=Math.random}){
  const wasBroken=!!battle.broken;let mult=1,shieldHit=false,breakNow=false;
  battle.orbs=Math.max(0,(battle.orbs||0)-boost);
+ let revealNow=null;
+ if(correct&&category&&battle.weak?.includes(category)&&Array.isArray(battle.revealed)&&!battle.revealed.includes(category)){battle.revealed.push(category);revealNow=category;}
  if(correct){
   mult*=boostMultiplier(boost);
   if(wasBroken)mult*=BREAK.breakMult;
@@ -63,10 +66,12 @@ export function resolveBreak(battle,{correct,boost=0,category=null,random=Math.r
  // 破盾只維持一題：這題結束（不論對錯）就回滿護盾。
  if(wasBroken){battle.broken=false;battle.shield=battle.maxShield;}
  battle.cards=dealCards(battle.cats,battle.weak,random);
- return {mult,boost,shieldHit,breakNow,wasBroken,noCounter:wasBroken,shield:battle.shield,maxShield:battle.maxShield,orbs:battle.orbs};
+ return {mult,boost,shieldHit,breakNow,revealNow,wasBroken,noCounter:wasBroken,shield:battle.shield,maxShield:battle.maxShield,orbs:battle.orbs};
 }
 // 收服招式：不影響護盾與靈氣，只換一手招式卡；若正處於破盾，這題也算用掉破盾。
 export function afterCatch(battle,random=Math.random){
  const wasBroken=!!battle.broken;if(wasBroken){battle.broken=false;battle.shield=battle.maxShield;}
  battle.cards=dealCards(battle.cats,battle.weak,random);return {noCounter:wasBroken};
 }
+// 給畫面看的弱點：還沒翻開的換成 null（畫面顯示「？？」）。舊對戰沒有 revealed 時全部公開。
+export const visibleWeak=(weak,revealed)=>(weak||[]).map(c=>!Array.isArray(revealed)||revealed.includes(c)?c:null);

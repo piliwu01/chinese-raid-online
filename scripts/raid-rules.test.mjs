@@ -47,3 +47,13 @@ test('boss shield: none for banks without categories, size clamps, and pause ext
  const s=newRoom({code:'BRK235',hostId:'t',className:'313',duration:RAID.duration,customHp:100000},now);s.members.s1=member();s.weakPool=['成語','修辭'];startRoom(s,now);assert.equal(s.bossShield.max,RAID_BREAK.min);
  s.bossShield.until=now+5000;pauseRoom(s,now+1000);resumeRoom(s,now+61000);assert.equal(s.bossShield.until,now+65000);
 });
+
+test('raid boss shield shows one breaker category; a correct answer reveals the other, refill hides again',()=>{
+ const s=newRoom({code:'BRK236',hostId:'t',className:'313',duration:RAID.duration,customHp:100000},now);for(let i=1;i<=5;i++)s.members['s'+i]=member('s'+i);
+ s.weakPool=['成語','修辭','對聯','字音字形'];startRoom(s,now);s.comboCooldownUntil=Infinity;s.nextAttackAt=Infinity;s.skillNextAt=Infinity;
+ const b=s.bossShield,hidden=b.weak[1];assert.deepEqual(b.revealed,[b.weak[0]]);
+ recordHit(s,s.members.s1,false,now,'medium',hidden);assert.equal(b.revealed.length,1);
+ recordHit(s,s.members.s1,true,now,'medium',hidden);assert.ok(b.revealed.includes(hidden));assert.ok(s.events.some(e=>e.type==='reveal'));
+ b.until=now+10;advanceRoom(s,now+20);assert.equal(b.revealed.length,1);assert.equal(b.revealed[0],b.weak[0]);
+ assert.ok(!s.events[0].text.includes(b.weak[1]),'恢復訊息不洩漏隱藏題型');
+});

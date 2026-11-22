@@ -25,7 +25,7 @@ import {ownedSpirit} from './ownership.js';
 import {categorize,comboMultiplier,SHINY_RATE,bumpQuest,questState,publicQuests,QUESTS,addInk,inkReady,publicInk,INK,earnedTitles,setProgress} from './play.js';
 import {MAX_XP} from '../src/growth.js';
 import {claimCollection,publicCollection} from './collection.js';
-import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch} from './breakboost.js';
+import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak} from './breakboost.js';
 
 export {taipeiDate};
 export const freshState = () => ({bestiary:BESTIARY_VERSION,growth:freshGrowth(),nickname:'',food:0,bond:0,days:[],fed:[],roundDays:[],passes:{},claimed:{},items:{},captured:[],selected:DEFAULT_SELECTED,battle:null,pending:null,challenge:null});
@@ -34,7 +34,7 @@ export const itemName = (starter,at) => ({2010:['雷之徽章','雷霆之證'],2
 export const requiredDays = at => at===50?7:14;
 export function fail(message,status=400){throw Object.assign(new Error(message),{status});}
 export const publicQuestion = q => q ? {id:q.id,question:q.question,options:q.options,optionTexts:q.optionTexts,timeLimit:q.timeLimit,expires:q.expires,difficulty:q.difficulty,category:q.category} : null;
-export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,...out}=s;const day=taipeiDate(now);return {...out,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:earnedTitles(s.captured),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
+export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:earnedTitles(s.captured),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;

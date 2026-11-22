@@ -64,7 +64,7 @@ export function BossShieldBar({ room, now, compact = false }) {
       {broken
         ? <b className="bs-count">全班傷害 ×2 · {Math.min(10, Math.max(0, Math.ceil((b.until - now) / 1000)))} 秒</b>
         : settling ? <b className="bs-count">護盾恢復中…</b>
-        : <><b className="bs-count">{left} / {b.max}</b><span className="bs-weak">破盾題型 {b.weak.map(c => <em key={c}>{c}</em>)}</span></>}
+        : <><b className="bs-count">{left} / {b.max}</b><span className="bs-weak">破盾題型 {b.weak.map((c, i) => c ? <em key={c}>{c}</em> : <em key={'h' + i} className="weak-hidden" title="答對這種題型就會翻開">？？</em>)}</span></>}
     </div>
   );
 }
@@ -88,6 +88,39 @@ export function BreakSweep({ room, now, compact = false }) {
         <span className="sweep-icon" aria-hidden="true">💥</span>
         <div className="sweep-text"><small>{fx.name ? `${fx.name} 擊破魔王護盾` : '魔王護盾被擊破'}</small><strong>破盾！全班傷害 ×2</strong></div>
       </div>
+    </div>
+  );
+}
+
+// 行動順序列：把接下來 60 秒會發生的事排在時間軸上（魔王反擊、魔王出招、破盾結束、合體技冷卻、時間到）。
+const TL_SPAN = 60000;
+export function ActionTimeline({ room, now, compact = false }) {
+  if (!['active', 'paused'].includes(room.status)) return null;
+  const items = [], add = (at, kind, text) => { if (at && at > now && at - now <= TL_SPAN) items.push({ at, kind, text }); };
+  const every = room.phase === 2 ? 28000 : 40000;
+  if (room.nextAttackAt) { add(room.nextAttackAt, 'attack', '魔王反擊'); add(room.nextAttackAt + every, 'attack', '魔王反擊'); }
+  const sk = room.skill || {};
+  if (sk.stage === 'warn') add(sk.until, 'skill', `發動：${BOSS_SKILLS[sk.id]?.name || '技能'}`);
+  else if (sk.stage === 'active') add(sk.until, 'end', `${BOSS_SKILLS[sk.id]?.name || '技能'}結束`);
+  if (sk.next && sk.next > (sk.until || 0)) add(sk.next, 'skill', '魔王出招預告');
+  if (room.bossShield?.until > now) add(room.bossShield.until, 'break', '破盾結束');
+  if (room.classCombo?.cooldownUntil > now) add(room.classCombo.cooldownUntil, 'combo', '合體技可再用');
+  add(room.endsAt, 'end', '時間到');
+  items.sort((a, b) => a.at - b.at);
+  let lastPct = -100, row = 0;
+  for (const it of items) { it.pct = ((it.at - now) / TL_SPAN) * 100; row = it.pct - lastPct < (compact ? 22 : 14) ? 1 - row : 0; it.row = row; lastPct = it.pct; }
+  return (
+    <div className={`action-timeline ${compact ? 'is-compact' : ''}`} role="list" aria-label="接下來 60 秒">
+      <span className="tl-now">現在</span>
+      <div className="tl-track">
+        {items.map((it, i) => (
+          <div key={`${it.kind}${it.at}${i}`} role="listitem" className={`tl-item kind-${it.kind} row-${it.row} ${it.pct < 10 ? 'edge-l' : it.pct > 88 ? 'edge-r' : ''}`} style={{ left: `${it.pct}%` }}>
+            <i aria-hidden="true" />
+            <span><b>{it.text}</b>{Math.ceil((it.at - now) / 1000)} 秒</span>
+          </div>
+        ))}
+      </div>
+      <span className="tl-end">60 秒</span>
     </div>
   );
 }

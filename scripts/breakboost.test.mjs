@@ -80,3 +80,12 @@ test('cards dealt after an answer keep their categories even though /answer carr
  const s=student();start(s);ask(s,'quick');const q=s.pending;applyAction(s,'/answer',{questionId:q.id,choice:q.answer},T0+1000,null);
  assert.ok(s.battle.cards.every(c=>c.category),'每張卡都有題型');assert.ok(s.battle.cards.some(c=>s.battle.weak.includes(c.category)));
 });
+
+test('one weakness is shown at the start; the other is hidden until a correct answer in that category',async()=>{
+ const {visibleWeak}=await import('../shared/breakboost.js');const {publicState}=await import('../shared/game.js');
+ const s=student();start(s);const b=s.battle;assert.deepEqual(b.revealed,[b.weak[0]]);
+ const pub=publicState(s).battle;assert.equal(pub.weak[0],b.weak[0]);assert.equal(pub.weak[1],null,'第二個弱點不外露');
+ const hidden=b.weak[1];assert.equal(resolveBreak(b,{correct:false,category:hidden}).revealNow,null,'答錯不翻開');
+ assert.equal(resolveBreak(b,{correct:true,category:hidden}).revealNow,hidden);assert.deepEqual(visibleWeak(b.weak,b.revealed),b.weak);
+ assert.deepEqual(visibleWeak(['成語','修辭'],undefined),['成語','修辭'],'舊對戰全部公開');
+});

@@ -1,7 +1,7 @@
 import SceneBg from './SceneBg.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {SkillBanner} from './BossSkill.jsx';
-import {BossIntro,SkillSweep,BossShieldBar,BreakSweep} from './RaidFx.jsx';
+import {BossIntro,SkillSweep,BossShieldBar,BreakSweep,ActionTimeline} from './RaidFx.jsx';
 import {Swords,Shield,Heart,Clock,Zap,Users} from 'lucide-react';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
@@ -71,7 +71,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
  const taunt=useBossTaunt(room,fresh);
  const bossHits=effects.filter(e=>['hit','strong','fire','poison','ultimate'].includes(e.type)),counter=effects.filter(e=>e.type==='boss').at(-1),ultimate=effects.filter(e=>e.type==='ultimate').at(-1),phaseFx=effects.filter(e=>e.type==='phase').at(-1),last=effects.at(-1);
  return <>
-  <RaidVitals room={room} remaining={remaining} strike={strike}/>
+  <RaidVitals room={room} remaining={remaining} strike={strike}/><ActionTimeline room={room} now={now}/>
   <ClassCombo room={room} now={now}/>
   <section ref={arenaRef} className={`raid-arena ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.members.length>36?'is-crowded':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>

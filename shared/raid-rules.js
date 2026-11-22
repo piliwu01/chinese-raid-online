@@ -19,14 +19,14 @@ function pickBreakWeak(pool,prev,random=Math.random){
 export function initBreak(s,random=Math.random){
  const pool=s.weakPool||[];if(!pool.length){s.bossShield=null;return;}
  const max=Math.max(RAID_BREAK.min,Math.min(RAID_BREAK.max,Object.keys(s.members||{}).length));
- s.bossShield={max,left:max,weak:pickBreakWeak(pool,null,random),until:0,count:0};
+ const weak=pickBreakWeak(pool,null,random);s.bossShield={max,left:max,weak,revealed:weak.slice(0,1),until:0,count:0};
 }
 export const breakActive=(s,now)=>!!(s.bossShield&&s.bossShield.until>now);
 // 破盾時間結束：護盾回滿、換破盾題型。回傳是否有變動。
 export function settleBreak(s,now,random=Math.random){
  const b=s.bossShield;if(!b||!b.until||b.until>now)return false;
- b.until=0;b.left=b.max;b.weak=pickBreakWeak(s.weakPool||b.weak,b.weak,random);
- addEvent(s,'shield',`魔王護盾恢復了！新的破盾題型：${b.weak.join('、')}`,now,{weak:b.weak});return true;
+ b.until=0;b.left=b.max;b.weak=pickBreakWeak(s.weakPool||b.weak,b.weak,random);b.revealed=b.weak.slice(0,1);
+ addEvent(s,'shield',`魔王護盾恢復了！新的破盾題型：${b.weak.map(c=>b.revealed.includes(c)?c:'？？').join('、')}`,now);return true;
 }
 export function checkPhase(s,now){
  if(s.phase===2||s.hp<=0||!s.maxHp||s.hp>s.maxHp/2)return;
@@ -84,6 +84,7 @@ export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前
 export function recordHit(s,m,correct,now,difficulty,category=''){
  m.answered++;const dk=['easy','medium','hard'].includes(difficulty)?difficulty:'medium';m.diff=m.diff||{};m.diff[dk]=m.diff[dk]||[0,0];m.diff[dk][1]++;if(correct)m.diff[dk][0]++;
  if(!correct){m.combo=0;if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
+ {const bs=s.bossShield;if(bs&&category&&bs.weak.includes(category)&&Array.isArray(bs.revealed)&&!bs.revealed.includes(category)){bs.revealed.push(category);addEvent(s,'reveal',`${m.name}找出魔王的另一個破盾題型：${category}！`,now,{actorId:m.id,category});}}
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
  const warded=skillActive(s,'ward');settleBreak(s,now);const broken=breakActive(s,now);
  const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult:1)*comboMultiplier(m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
