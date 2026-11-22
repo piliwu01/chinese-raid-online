@@ -23,3 +23,9 @@ test('finishing freezes the remaining time, including a cancel while paused',()=
  const c=room();c.nextAttackAt=Infinity;c.skillNextAt=Infinity;advanceRoom(c,c.endsAt+5000);assert.equal(c.status,'timeout');assert.equal(c.leftMs,0);
  const w=newRoom({duration:RAID.duration},now);w.members.s1=member();finishRoom(w,'cancelled',now+1000);assert.equal(w.leftMs,RAID.duration,'還沒開戰就結束：顯示完整時間');
 });
+test('scoreboard data: per-difficulty record, best combo, event counts and the finishing blow',()=>{
+ const s=room(),m=s.members.s1;s.comboCooldownUntil=Infinity;s.hp=25;
+ recordHit(s,m,true,now,'easy');recordHit(s,m,false,now,'hard');recordHit(s,m,true,now,'medium');recordHit(s,m,true,now,'medium');
+ assert.deepEqual(m.diff.easy,[1,1]);assert.deepEqual(m.diff.hard,[0,1]);assert.equal(m.bestCombo,2);
+ assert.equal(s.status,'won');assert.equal(s.finisherId,'s1');assert.equal(s.stats.hit,3);assert.equal(s.stats.start,1);
+});

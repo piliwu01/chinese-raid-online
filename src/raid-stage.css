@@ -193,3 +193,62 @@
 @keyframes nextIn{from{transform:translateY(-8px);opacity:0}}
 @media(max-width:600px){.raid-next-room{flex-wrap:wrap;padding:14px}.raid-next-room>svg{display:none}.raid-next-room .primary-button{width:100%;justify-content:center}}
 @media(prefers-reduced-motion:reduce){.raid-next-room{animation:none}}
+/* 2026-11-22 討伐結束全班戰績榜 */
+.raid-scoreboard{margin:22px 0;padding:22px 24px;border-radius:18px;background:linear-gradient(160deg,#141b2bf2,#0f1522f2);border:1px solid #f2cf7744;text-align:left;color:#e8edf6}
+.sb-head{display:flex;align-items:center;justify-content:center;gap:16px;position:relative}
+.sb-head h2{display:flex;align-items:center;gap:14px;margin:0;font-size:40px;font-weight:900;color:#f6d46c;letter-spacing:2px}
+.status-lost .sb-head h2,.status-cancelled .sb-head h2{color:#cdd6e6}
+.sb-full{position:absolute;right:0;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid #f2cf7766;background:#f2cf7714;color:#f6d46c;font-size:14px;cursor:pointer}
+.sb-summary{margin:10px 0 16px;text-align:center;font-size:19px;color:#d7deea}
+.sb-table-wrap{overflow-x:auto}
+.sb-table{width:100%;border-collapse:collapse;font-size:18px}
+.sb-table th{position:sticky;top:0;background:#232a4a;color:#f0f3fa;font-size:16px;font-weight:800;padding:10px 10px;text-align:left;white-space:nowrap}
+.sb-table td{padding:9px 10px;border-bottom:1px solid #ffffff14;white-space:nowrap}
+.sb-table tr.is-me td{background:#f2cf7712}
+.sb-rank{font-weight:800;color:#b9c4d6;width:3em}
+.sb-name{font-weight:800}
+.sb-name img{width:34px;height:34px;object-fit:contain;vertical-align:middle;margin-right:8px}
+.sb-title{display:flex;align-items:center;gap:8px}
+.sb-lv{display:inline-block;padding:4px 14px;border-radius:999px;font-weight:900;color:#fff;font-size:17px}
+.tier-gold{background:linear-gradient(90deg,#f3b53b,#f07b6a);box-shadow:0 0 12px #f3b53b55}
+.tier-amber{background:linear-gradient(90deg,#c9782b,#a5571f)}
+.tier-teal{background:#2f7d6d}
+.tier-violet{background:#5a4f86}
+.sb-title em{font-style:normal;font-size:14px;padding:3px 10px;border-radius:999px;border:1px solid #f2cf7788;color:#f6d46c;background:#f2cf7714}
+.sb-num{font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace}
+.sb-contrib{font-weight:800;color:#f6d46c}
+.sb-note{margin:12px 0 0;font-size:13px;color:#9fadc2}
+.raid-scoreboard.is-projecting{position:fixed;inset:0;z-index:200;margin:0}
+.raid-scoreboard:fullscreen,.raid-scoreboard.is-projecting{overflow:auto;padding:36px 48px;border-radius:0;background:#0d1320}
+.raid-scoreboard:fullscreen .sb-head h2,.raid-scoreboard.is-projecting .sb-head h2{font-size:64px}
+.raid-scoreboard:fullscreen .sb-summary,.raid-scoreboard.is-projecting .sb-summary{font-size:28px}
+.raid-scoreboard:fullscreen .sb-table,.raid-scoreboard.is-projecting .sb-table{font-size:26px}
+.raid-scoreboard:fullscreen .sb-table th,.raid-scoreboard.is-projecting .sb-table th{font-size:22px}
+.raid-scoreboard:fullscreen .sb-lv,.raid-scoreboard.is-projecting .sb-lv{font-size:24px}
+.raid-scoreboard:fullscreen .sb-title em,.raid-scoreboard.is-projecting .sb-title em{font-size:18px}
+.raid-scoreboard:fullscreen .sb-name img,.raid-scoreboard.is-projecting .sb-name img{width:46px;height:46px}
+@media(max-width:700px){
+ .raid-scoreboard{padding:16px 12px}
+ .sb-head h2{font-size:26px;gap:8px}
+ .sb-full{display:none}
+ .sb-summary{font-size:14px}
+ .sb-table{font-size:14px}
+ .sb-table th{font-size:12px;padding:8px 6px}
+ .sb-table td{padding:8px 6px}
+ .sb-lv{font-size:13px;padding:3px 9px}
+ .sb-title{flex-wrap:wrap;gap:4px}
+ .sb-title em{font-size:11px;padding:2px 7px}
+ .sb-name img{width:26px;height:26px;margin-right:5px}
+}
+@media(max-width:700px){
+ .sb-table thead{display:none}
+ .sb-table,.sb-table tbody{display:block}
+ .sb-table tr{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 6px;padding:12px 4px;border-bottom:1px solid #ffffff14}
+ .sb-table td{border:0;padding:0;white-space:normal}
+ .sb-table .sb-rank{grid-column:1;align-self:center;font-size:20px}
+ .sb-table .sb-name{grid-column:2/-1;align-self:center;font-size:16px}
+ .sb-table .sb-title{grid-column:1/-1}
+ .sb-table .sb-num{font-size:16px}
+ .sb-table .sb-num::before{content:attr(data-label);display:block;font:400 11px system-ui,sans-serif;color:#9fadc2;margin-bottom:2px}
+}
+@media(max-width:700px){.sb-table tr.is-me td{background:none}.sb-table tr.is-me{background:#f2cf7712;border-radius:10px;padding:12px 10px}}

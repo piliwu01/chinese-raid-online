@@ -34,13 +34,14 @@ export const live=status=>['waiting','active','paused'].includes(status);
 export function raidError(message,status=400){throw Object.assign(Error(message),{status});}
 // Enough replay history for a 60-student burst, skills and item events.
 export const RAID_EVENT_BUFFER=256;
-export function addEvent(s,type,text,now,extra={}){s.sequence++;s.events.unshift({sequence:s.sequence,type,text,at:now,...extra});s.events=s.events.slice(0,RAID_EVENT_BUFFER);}
+export function addEvent(s,type,text,now,extra={}){s.stats=s.stats||{};s.stats[type]=(s.stats[type]||0)+1;s.sequence++;s.events.unshift({sequence:s.sequence,type,text,at:now,...extra});s.events=s.events.slice(0,RAID_EVENT_BUFFER);}
 export function newRoom(config,now){return {...config,status:'waiting',createdAt:now,sequence:0,members:{},shield:100,maxShield:100,hp:0,maxHp:0,endsAt:null,nextAttackAt:null,pausedAt:null,events:[],outbox:[],rankings:null,stunUntil:0,drumUntil:0,guardCharges:0,poisons:[],poisonNextAt:null};}
 export function rank(s,field){const order=field==='damage'?'damageOrder':'healOrder';return Object.values(s.members).filter(m=>m[field]>0).sort((a,b)=>b[field]-a[field]||a[order]-b[order]||a.joinOrder-b.joinOrder).slice(0,10).map((m,i)=>({id:m.id,name:m.name,partner:m.partner,nickname:m.nickname,value:m[field],rank:i+1}));}
 export function finishRoom(s,status,now){
  if(!live(s.status))return;
  // 結束時把剩餘時間定格（暫停中結束就以暫停那一刻計算），結算畫面不再倒數。
  s.leftMs=s.endsAt?Math.max(0,s.endsAt-(s.status==='paused'&&s.pausedAt?s.pausedAt:now)):s.duration;
+ if(status==='won')s.finisherId=s.events.find(e=>e.actorId)?.actorId||null; // 最後一擊
  s.status=status;s.finishedAt=now;s.rankings={damage:rank(s,'damage'),heal:rank(s,'heal')};
  addEvent(s,'finish',({won:'魔王被擊敗！全班一起守住了這裡。',lost:'護盾歸零，本次討伐結束。',timeout:'時間到，謝謝每一位夥伴的努力。',cancelled:'老師已提前結束本次討伐。'})[status],now);
  for(const m of Object.values(s.members)){
@@ -61,7 +62,8 @@ export function startRoom(s,now){if(s.status!=='waiting')raidError('房間已開
 export function pauseRoom(s,now){advanceRoom(s,now);if(s.status!=='active')raidError('目前無法暫停。',409);s.status='paused';s.pausedAt=now;addEvent(s,'pause','老師暫停了討伐，計時與題目一起休息。',now);}
 export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前沒有暫停。',409);const delay=now-s.pausedAt;s.endsAt+=delay;s.nextAttackAt+=delay;if(s.poisonNextAt)s.poisonNextAt+=delay;for(const field of ['stunUntil','drumUntil','comboCooldownUntil'])if(s[field]>s.pausedAt)s[field]+=delay;if(s.weakStart)s.weakStart+=delay;if(s.comboHits)s.comboHits=s.comboHits.map(t=>t+delay);shiftSkills(s,delay,s.pausedAt);for(const m of Object.values(s.members))if(m.question)m.question.expires+=delay;s.status='active';s.pausedAt=null;addEvent(s,'resume','大家準備好了，繼續討伐！',now);}
 export function recordHit(s,m,correct,now,difficulty,category=''){
- m.answered++;if(!correct){m.combo=0;if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;
+ m.answered++;const dk=['easy','medium','hard'].includes(difficulty)?difficulty:'medium';m.diff=m.diff||{};m.diff[dk]=m.diff[dk]||[0,0];m.diff[dk][1]++;if(correct)m.diff[dk][0]++;
+ if(!correct){m.combo=0;if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
  const warded=skillActive(s,'ward');
  const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*comboMultiplier(m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
