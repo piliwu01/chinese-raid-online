@@ -27,9 +27,17 @@ export async function handleRaid(req,env,user,path,body){
   }
   return forward(env,row.code,'/init',user,{code:row.code,hostId:user.id,className,bankId,bankTitle,duration:minutes*60000,customHp});
  }
- const match=path.match(/^\/raid\/([A-Z2-9]{6})\/(join|partner|snapshot|socket|start|pause|resume|cancel|next|answer|skill|item|analysis|taunt)$/);if(!match)raidError('房間碼格式不正確。',404);const [,code,action]=match;
- if(['snapshot','socket'].includes(action)&&req.method!=='GET')raidError('請使用 GET。',405);if(!['snapshot','socket'].includes(action)&&req.method!=='POST')raidError('請使用 POST。',405);
- const row=await env.DB.prepare('SELECT class_name FROM raid_rooms WHERE code=?').bind(code).first();if(!row)raidError('找不到這個房間。',404);
+ const match=path.match(/^\/raid\/([A-Z2-9]{6})\/(join|partner|snapshot|socket|start|pause|resume|cancel|next|answer|skill|item|analysis|taunt|after)$/);if(!match)raidError('房間碼格式不正確。',404);const [,code,action]=match;
+ if(['snapshot','socket','after'].includes(action)&&req.method!=='GET')raidError('請使用 GET。',405);if(!['snapshot','socket','after'].includes(action)&&req.method!=='POST')raidError('請使用 POST。',405);
+ const row=await env.DB.prepare('SELECT class_name,host_id,created_at FROM raid_rooms WHERE code=?').bind(code).first();if(!row)raidError('找不到這個房間。',404);
+ // 一鍵加入下一場：同一位老師、同一班在這場之後開的、還在進行中的房間。
+ if(action==='after'){
+  if(user.role!=='student'||user.class_name!==row.class_name)raidError('只能查看自己班級的下一場。',403);
+  const next=await env.DB.prepare("SELECT code FROM raid_rooms WHERE host_id=? AND class_name=? AND created_at>? AND status IN ('waiting','active','paused') ORDER BY created_at DESC LIMIT 1").bind(row.host_id,row.class_name,row.created_at).first();
+  if(!next)return json({next:null});
+  const st=await forward(env,next.code,'/status',user);const s=st.ok?await st.json():{};
+  return json({next:live(s.status)?{code:next.code,status:s.status}:null});
+ }
  if(action==='socket'){const origin=req.headers.get('Origin');if(origin&&origin!==new URL(req.url).origin)raidError('不允許跨網站連線。',403);}
  let membershipAdded=false,activityAdded=false;
  if(action==='join'){

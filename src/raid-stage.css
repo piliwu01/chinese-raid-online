@@ -183,3 +183,13 @@
  .raid-skill-card .raid-personal-stats{flex-wrap:wrap;gap:10px 8px;padding-top:14px}
 }
 @media(min-width:701px) and (max-width:1050px){.raid-student-grid.raid-student-grid{grid-template-columns:minmax(0,3fr) minmax(220px,1fr)}}
+/* 2026-11-22 討伐結束後一鍵加入下一場 */
+.raid-next-wait{display:flex;align-items:center;gap:9px;margin-top:14px;padding:11px 16px;border-radius:13px;border:1px dashed #8197b466;color:#b9c6d8;font-size:14px}
+.raid-next-room{display:flex;align-items:center;gap:16px;margin-top:14px;padding:16px 20px;border-radius:16px;border:1px solid #f2cf77aa;background:linear-gradient(100deg,#4a3a1ccc,#1c2b3d);box-shadow:0 0 24px #f2cf7733;color:#f8e3a8;animation:nextIn .5s ease-out}
+.raid-next-room>div{flex:1;min-width:0;display:grid;gap:4px}
+.raid-next-room strong{font-size:20px}
+.raid-next-room span{font-size:14px;color:#d9cfb5;overflow-wrap:anywhere}
+.raid-next-room .primary-button{flex:none;font-size:17px}
+@keyframes nextIn{from{transform:translateY(-8px);opacity:0}}
+@media(max-width:600px){.raid-next-room{flex-wrap:wrap;padding:14px}.raid-next-room>svg{display:none}.raid-next-room .primary-button{width:100%;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.raid-next-room{animation:none}}
