@@ -30,7 +30,7 @@ export function startBreak(battle,bank,random=Math.random){
  battle.cats=cats;battle.weak=shuffle(cats,random).slice(0,Math.min(BREAK.weakCount,cats.length));
  battle.revealed=battle.weak.slice(0,1); // 先翻開 1 個弱點，另 1 個要答對才翻開
  battle.maxShield=battle.weak.length?BREAK.shield:0;battle.shield=battle.maxShield;battle.broken=false;
- battle.orbs=BREAK.orbsStart;battle.cards=dealCards(cats,battle.weak,random);
+ battle.orbs=BREAK.orbsStart;battle.latent=0;battle.cards=dealCards(cats,battle.weak,random);
  return battle;
 }
 // 舊進度（功能上線前開始的對戰）缺少欄位時補齊。
@@ -75,3 +75,14 @@ export function afterCatch(battle,random=Math.random){
 }
 // 給畫面看的弱點：還沒翻開的換成 null（畫面顯示「？？」）。舊對戰沒有 revealed 時全部公開。
 export const visibleWeak=(weak,revealed)=>(weak||[]).map(c=>!Array.isArray(revealed)||revealed.includes(c)?c:null);
+
+// 潛力爆發（個人對戰，2026-11-22）：被反擊扣血 +35、破盾 +50，最多 100。
+// 集滿後出招前可選「覺醒」：這一題傷害 ×3，答錯也不會被反擊；覺醒時不使用靈氣，潛力歸零。
+export const LATENT={max:100,hurt:35,break:50,mult:3};
+export function gainLatent(battle,n){const before=battle.latent||0;battle.latent=Math.min(LATENT.max,before+n);return battle.latent-before;}
+export function checkAwaken(battle,awaken,move){
+ if(!awaken)return false;
+ if(move==='catch')throw Object.assign(new Error('收服時不能發動覺醒。'),{status:400});
+ if((battle.latent||0)<LATENT.max)throw Object.assign(new Error('潛力還沒集滿，不能發動覺醒。'),{status:400});
+ return true;
+}

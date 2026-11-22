@@ -25,7 +25,7 @@ import {ownedSpirit} from './ownership.js';
 import {categorize,comboMultiplier,SHINY_RATE,bumpQuest,questState,publicQuests,QUESTS,addInk,inkReady,publicInk,INK,earnedTitles,setProgress} from './play.js';
 import {MAX_XP} from '../src/growth.js';
 import {claimCollection,publicCollection} from './collection.js';
-import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak} from './breakboost.js';
+import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak,LATENT,gainLatent,checkAwaken} from './breakboost.js';
 
 export {taipeiDate};
 export const freshState = () => ({bestiary:BESTIARY_VERSION,growth:freshGrowth(),nickname:'',food:0,bond:0,days:[],fed:[],roundDays:[],passes:{},claimed:{},items:{},captured:[],selected:DEFAULT_SELECTED,battle:null,pending:null,challenge:null});
@@ -70,15 +70,15 @@ export function applyAction(s,route,b,now,bank=null){
   const move=String(b.move);if(!['quick','special','critical','catch'].includes(move))fail('招式無效。');
   if(s.pending&&s.pending.expires>=now){event.question=publicQuestion(s.pending);return event;}
   if(move==='catch'&&!canCapture(s.battle.hp,s.battle.maxHp))fail('對手 HP 須剩 15% 以下且尚未倒下才能收服。');
-  ensureBreak(s.battle,bank);const boost=move==='catch'?0:checkBoost(s.battle,b.boost),card=move==='catch'?null:cardFor(s.battle,move);
-  s.pending={...questionFor(bankForCard(bank,card),move==='quick'||move==='catch'?'easy':move==='critical'?'hard':'medium',now,s),move,boost,cardCategory:card?.category||null,battleId:s.battle.id};event.question=publicQuestion(s.pending);
+  ensureBreak(s.battle,bank);const awaken=checkAwaken(s.battle,!!b.awaken,move),boost=move==='catch'||awaken?0:checkBoost(s.battle,b.boost),card=move==='catch'?null:cardFor(s.battle,move);if(awaken)s.battle.latent=0;
+  s.pending={...questionFor(bankForCard(bank,card),move==='quick'||move==='catch'?'easy':move==='critical'?'hard':'medium',now,s),move,boost,awaken,cardCategory:card?.category||null,battleId:s.battle.id};event.question=publicQuestion(s.pending);
  }else if(route==='/answer'){
   if(!ownedSpirit(s,s.selected?.id))fail('這個角色尚未收服，請重新選擇自己的夥伴。',403);const q=s.pending;if(!q||q.id!==b.questionId||q.battleId!==s.battle?.id)fail('這題已結束，請重新取得題目。',409);
   event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;
   if(result.reward.complete){s.food++;if(!s.roundDays.includes(today))s.roundDays.push(today);if(addChest(s,'round'))event.chest='完成一輪 10 題';}
   if(event.correct&&noteCorrect(s,today))event.jade=true;
   const battle=s.battle;ensureBreak(battle,null);const brk=q.move==='catch'?afterCatch(battle):resolveBreak(battle,{correct:event.correct,boost:q.boost||0,category:q.category||null});event.break=brk;let damage=0,caught=false;const hpBefore=battle.hp;const passive=passiveFor(s.selected?.id);const burnBefore=battle.burn||0;const roll=()=>Math.random()<PASSIVE_RATE;
-  if(event.correct){bumpQuest(s,'correct10',today);if(q.move==='catch'){caught=canCapture(battle.hp,battle.maxHp)&&Math.random()<0.92;}else{s.combo=(s.combo||0)+1;const mult=comboMultiplier(s.combo),eff=effectiveness(s.selected?.type,battle.enemy?.type),crit=Math.random()<CRIT_RATE;damage=Math.round((({quick:22,special:45,critical:75}[q.move])+Math.floor(Math.random()*({quick:10,special:18,critical:22}[q.move])))*mult*eff.mult*(crit?CRIT:1)*(brk.mult||1));event.effect=eff.kind;event.crit=crit;battle.hp=Math.max(0,battle.hp-damage);if(s.combo>=5)bumpQuest(s,'combo5',today);
+  if(event.correct){bumpQuest(s,'correct10',today);if(q.move==='catch'){caught=canCapture(battle.hp,battle.maxHp)&&Math.random()<0.92;}else{s.combo=(s.combo||0)+1;const mult=comboMultiplier(s.combo),eff=effectiveness(s.selected?.type,battle.enemy?.type),crit=Math.random()<CRIT_RATE;damage=Math.round((({quick:22,special:45,critical:75}[q.move])+Math.floor(Math.random()*({quick:10,special:18,critical:22}[q.move])))*mult*eff.mult*(crit?CRIT:1)*(brk.mult||1)*(q.awaken?LATENT.mult:1));event.effect=eff.kind;event.crit=crit;battle.hp=Math.max(0,battle.hp-damage);if(s.combo>=5)bumpQuest(s,'combo5',today);
    if(passive?.id==='kui'&&battle.hp>0&&roll()){const extra=Math.min(battle.hp,Math.round(damage*PASSIVE_NUM.kuiExtra[passive.stage]));battle.hp-=extra;damage+=extra;event.passive={...passive,value:extra,text:`追加雷擊 ${extra} 點傷害`};}
    else if(passive?.id==='bifang'&&battle.hp>0&&roll()){battle.burn=PASSIVE_NUM.burnTurns;battle.burnDamage=PASSIVE_NUM.burnDamage[passive.stage];event.passive={...passive,value:battle.burnDamage,text:`${battle.enemy.zhName||'對手'}陷入灼燒，接下來 3 回合每回合扣 ${battle.burnDamage} HP`};}}
   if(passive?.id==='dangkang'&&battle.playerHp<battle.playerMaxHp&&roll()){const healed=Math.min(PASSIVE_NUM.heal[passive.stage],battle.playerMaxHp-battle.playerHp);battle.playerHp+=healed;event.passive={...passive,value:healed,text:`回復 ${healed} HP`};}
@@ -89,9 +89,11 @@ export function applyAction(s,route,b,now,bank=null){
   if(caught){battle.status='caught';{const u=recordChapterWin(s,battle.chapter);if(u)event.unlocked={id:u.id,name:u.name,place:u.place};}bumpQuest(s,'capture1',today);const had=s.captured.find(p=>p.id===battle.enemy.id);if(!had)s.captured.push(battle.enemy);else{if(battle.enemy.shiny&&!had.shiny)had.shiny=true;event.dupe=addDupe(s,battle.enemy.id);}}
   else if(battle.hp===0){battle.status='won';bumpQuest(s,'win3',today);{const u=recordChapterWin(s,battle.chapter);if(u)event.unlocked={id:u.id,name:u.name,place:u.place};}}
   const enraged=battle.hp>0&&battle.hp<=battle.maxHp*ENRAGE.at;if(enraged){event.enraged=true;if(hpBefore>battle.maxHp*ENRAGE.at)event.enrageStart=true;}
-  let enemyDamage=battle.status==='ready'&&!event.correct&&!brk.noCounter?Math.round((18+Math.floor(Math.random()*16))*(enraged?ENRAGE.mult:1)):0;
+  let enemyDamage=battle.status==='ready'&&!event.correct&&!brk.noCounter&&!q.awaken?Math.round((18+Math.floor(Math.random()*16))*(enraged?ENRAGE.mult:1)):0;
   if(enemyDamage>0&&battle.shell>0){battle.shell--;event.blocked={value:enemyDamage,left:battle.shell};enemyDamage=0;}
   battle.playerHp=Math.max(0,battle.playerHp-enemyDamage);if(battle.playerHp===0)battle.status='lost';
+  if(q.move!=='catch'||enemyDamage>0){const g=(enemyDamage>0?gainLatent(battle,LATENT.hurt):0)+(brk.breakNow?gainLatent(battle,LATENT.break):0);event.latent={value:battle.latent||0,gained:g,full:(battle.latent||0)>=LATENT.max};}
+  if(q.awaken)event.awaken=true;
   event.combat={damage,enemyDamage,caught,...battle,passive:event.passive||null,burn:event.burn||null,blocked:event.blocked||null};s.pending=null;
  }else if(route==='/challenge/start'){
   needPartner(s);const at=milestone(s);if(!nextEvolution(s.growth))fail('這位夥伴已完成所有進化。');if(s.days.length<requiredDays(at))fail(`需先累積 ${requiredDays(at)} 天有效陪伴。`);

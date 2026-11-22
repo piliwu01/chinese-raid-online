@@ -13,13 +13,13 @@ export function BreakCutIn({ fx, onDone }) {
   }, [fx?.key]);
   if (!fx) return null;
   return (
-    <div className="break-cutin" key={fx.key} aria-live="polite" role="status">
+    <div className={`break-cutin ${fx.kind ? `is-${fx.kind}` : ''}`} key={fx.key} aria-live="polite" role="status">
       <div className="cutin-flash" />
       <div className="cutin-band">
         <img src={fx.img} alt="" onError={e => { e.currentTarget.style.visibility = 'hidden'; }} />
-        <div className="cutin-text"><strong>破盾！</strong><span>BREAK · {fx.name}</span></div>
+        <div className="cutin-text"><strong>{fx.title || '破盾！'}</strong><span>{fx.sub || 'BREAK'} · {fx.name}</span></div>
       </div>
-      <p className="cutin-note">下一題傷害 ×2，答錯也不會被反擊</p>
+      <p className="cutin-note">{fx.note || '下一題傷害 ×2，答錯也不會被反擊'}</p>
     </div>
   );
 }

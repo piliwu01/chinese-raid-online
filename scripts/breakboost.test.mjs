@@ -89,3 +89,17 @@ test('one weakness is shown at the start; the other is hidden until a correct an
  assert.equal(resolveBreak(b,{correct:true,category:hidden}).revealNow,hidden);assert.deepEqual(visibleWeak(b.weak,b.revealed),b.weak);
  assert.deepEqual(visibleWeak(['成語','修辭'],undefined),['成語','修辭'],'舊對戰全部公開');
 });
+
+test('latent power: counters and breaks fill it; awaken needs a full gauge, triples damage and blocks the counter',async()=>{
+ const {LATENT}=await import('../shared/breakboost.js');
+ const s=student();start(s);assert.equal(s.battle.latent,0);
+ assert.throws(()=>applyAction(s,'/question',{move:'quick',awaken:true},T0,bank),/潛力還沒集滿/);
+ s.battle.shell=0;ask(s,'special');const miss=answer(s,false);if(miss.combat.enemyDamage>0){assert.equal(miss.latent.gained,LATENT.hurt);assert.equal(s.battle.latent,LATENT.hurt);}
+ s.battle.latent=LATENT.max;s.battle.orbs=3;s.battle.hp=s.battle.maxHp=100000;
+ assert.throws(()=>applyAction(s,'/question',{move:'catch',awaken:true},T0,bank),/收服|HP/);
+ ask(s,'quick',0);s.pending=null;
+ const q1=applyAction(s,'/question',{move:'quick',awaken:true,boost:3},T0,bank).question;assert.equal(s.battle.latent,0,'發動就歸零');assert.equal(s.pending.awaken,true);assert.equal(s.pending.boost,0,'覺醒不用靈氣');
+ const hp=s.battle.playerHp,wrong=answer(s,false);assert.equal(wrong.combat.enemyDamage,0,'覺醒答錯不被反擊');assert.equal(s.battle.playerHp,hp);assert.equal(s.battle.orbs,3);
+ s.battle.latent=LATENT.max;s.combo=0;applyAction(s,'/question',{move:'quick',awaken:true},T0,bank);const hit=answer(s,true);assert.equal(hit.awaken,true);assert.ok(hit.combat.damage>=22*LATENT.mult*0.8,'傷害 ×3');
+ const b={weak:['成語'],revealed:['成語'],shield:1,maxShield:4,broken:false,orbs:1,cards:[],cats:['成語'],latent:0};resolveBreak(b,{correct:true,category:'成語'});assert.equal(b.broken,true);
+});
