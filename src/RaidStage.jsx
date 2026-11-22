@@ -2,7 +2,7 @@ import SceneBg from './SceneBg.jsx';
 import React,{useEffect,useRef,useState} from 'react';
 import {SkillBanner} from './BossSkill.jsx';
 import {BossIntro,SkillSweep} from './RaidFx.jsx';
-import {Swords,Shield,Clock,Zap,Users} from 'lucide-react';
+import {Swords,Shield,Heart,Clock,Zap,Users} from 'lucide-react';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
 import {collectStageEvents,formation,effectLabel,EFFECT_LIFETIME,roomIdentity} from './raid-stage.js';
@@ -11,9 +11,9 @@ import './raid-stage.css';
 // 魔王反擊時墨汁潑濺的位置：[x%, y%, 尺寸(cqw), 延遲ms]，集中在右側隊伍區。
 const INK=[[58,30,13,0],[74,24,10,90],[88,40,15,40],[66,55,17,130],[82,68,12,60],[52,72,11,170],[94,78,9,210],[70,86,10,120],[46,44,8,240]];
 const clock=n=>`${String(Math.floor(Math.max(0,n)/60)).padStart(2,'0')}:${String(Math.max(0,n)%60).padStart(2,'0')}`;
-export function RaidVitals({room,remaining,strike,compact=false}){
- return <div className={`raid-vitals ${compact?'is-compact':''}`}>
-  <div className="vital-boss"><span><Swords size={14}/>魔王生命</span><b>{room.hp.toLocaleString()}<small> / {room.maxHp.toLocaleString()||'等待開戰'}</small></b><div className="raid-meter boss-meter" role="progressbar" aria-label="魔王生命值" aria-valuemin={0} aria-valuemax={room.maxHp||1} aria-valuenow={room.hp}><span style={{width:`${room.maxHp?room.hp/room.maxHp*100:100}%`}}/></div></div>
+export function RaidVitals({room,remaining,strike,compact=false,noBoss=false}){
+ return <div className={`raid-vitals ${compact?'is-compact':''} ${noBoss?'no-boss':''}`}>
+  {!noBoss&&<div className="vital-boss"><span><Swords size={14}/>魔王生命</span><b>{room.hp.toLocaleString()}<small> / {room.maxHp.toLocaleString()||'等待開戰'}</small></b><div className="raid-meter boss-meter" role="progressbar" aria-label="魔王生命值" aria-valuemin={0} aria-valuemax={room.maxHp||1} aria-valuenow={room.hp}><span style={{width:`${room.maxHp?room.hp/room.maxHp*100:100}%`}}/></div></div>}
   <div className={`vital-shield ${room.shield<=30?'danger':''}`}><span><Shield size={14}/>全班護盾</span><b>{room.shield}<small> / 100</small></b><div className="raid-meter shield-meter" role="progressbar" aria-label="全班護盾" aria-valuemin={0} aria-valuemax={100} aria-valuenow={room.shield}><span style={{width:`${room.shield}%`}}/></div></div>
   <div className="vital-clock"><span><Clock size={14}/>剩餘時間</span><b>{clock(remaining)}</b></div>
   <div className="vital-strike"><span><Zap size={14}/>魔王反擊</span><b>{['active','paused'].includes(room.status)?`${strike}s`:'—'}</b></div>
@@ -116,4 +116,15 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    <div className="arena-bottom"><div><i/>{room.status==='active'?'全班即時共鬥':room.status==='waiting'?'夥伴集結中':'共同守護的每一刻'}<small>角色依加入順序固定站位</small></div><p role="status">{last?.text||room.events[0]?.text||'帶著你的夥伴，一起出發。'}</p></div>
   </section>
  </>;
+}
+
+// 學生畫面頂端的固定戰況條：魔王頭像與剩餘血量、我造成的傷害與修復的護盾。往下捲也一直看得到。
+export function MyRaidStrip({room}){
+ const me=room.me||{},pct=room.maxHp?Math.max(0,room.hp/room.maxHp*100):100;
+ return <div className={`my-raid-strip ${room.phase===2?'is-enraged':''}`} role="status" aria-label="魔王血量與我的貢獻">
+  <img className="mrs-boss" src="/assets/boss.png" alt="魔王墨卷魔神"/>
+  <div className="mrs-hp"><div className="mrs-name"><strong>墨卷魔神</strong>{room.phase===2&&<em>暴走</em>}<span><b>{room.hp.toLocaleString()}</b> / {room.maxHp.toLocaleString()}</span></div>
+   <div className="raid-meter boss-meter" role="progressbar" aria-label="魔王剩餘血量" aria-valuemin={0} aria-valuemax={room.maxHp||1} aria-valuenow={room.hp}><span style={{width:`${pct}%`}}/></div></div>
+  <div className="mrs-me"><span className="mrs-dmg"><Swords size={14}/>我的傷害<b key={`d${me.damage}`}>{(me.damage||0).toLocaleString()}</b></span><span className="mrs-heal"><Heart size={14}/>我的修復<b key={`h${me.heal}`}>{(me.heal||0).toLocaleString()}</b></span></div>
+ </div>;
 }

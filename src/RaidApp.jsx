@@ -4,7 +4,7 @@ import RaidAnalysis from './RaidAnalysis.jsx';
 import AiTutor from './AiTutor.jsx';
 import {Swords,Shield,Heart,Zap,Clock,Users,Wifi,WifiOff,Maximize,Trophy,ArrowRight,Pause,Play,Flag,RefreshCw,Home} from 'lucide-react';
 import {RaidBag} from './ItemShop.jsx';
-import RaidStage,{RaidVitals,RaidStatuses,ClassCombo,WeakBanner} from './RaidStage.jsx';
+import RaidStage,{MyRaidStrip,RaidVitals,RaidStatuses,ClassCombo,WeakBanner} from './RaidStage.jsx';
 import {SkillBanner,useShuffledOptions,FogOverlay} from './BossSkill.jsx';
 import {SkillSweep} from './RaidFx.jsx';
 import {partnerFor} from './growth.js';
@@ -39,9 +39,10 @@ export default function RaidApp({user,banks,cloud,onRefresh,onExit}){
  {error&&<div className="raid-error" role="alert"><span>{error}</span>{retryAction&&<button disabled={busy} onClick={safely(()=>perform(retryAction.path,retryAction.body))}>重試這次操作</button>}</div>}
  {!room?<RoomEntry cloud={cloud} user={user} banks={banks} classes={classes} busy={busy} perform={perform}/>:<>
  <section ref={boardRef} className={`raid-board status-${room.status}`} aria-label="即時討伐戰況"><div className="raid-board-top"><div><span className="room-class">{room.className} 班共同作戰</span><span className={`raid-status status-${room.status}`}><i/>{labels[room.status]}</span></div><div className="raid-room-code"><span>房間碼</span><strong>{room.code}</strong>{room.host&&<button aria-label="切換投影全螢幕" onClick={async()=>{try{if(document.fullscreenElement){await document.exitFullscreen();setProjector(false);}else if(projector){setProjector(false);}else{await boardRef.current.requestFullscreen();setProjector(true);}}catch{setProjector(!projector);}}}><Maximize size={17}/></button>}</div></div>
- {room.host?<RaidStage room={room} now={now} remaining={remaining} strike={strike} onExit={onExit}/>:<><RaidVitals room={room} remaining={remaining} strike={strike} compact/><ClassCombo room={room} now={now} compact/><WeakBanner room={room} now={now} compact/><SkillBanner room={room} now={now} compact/><SkillSweep room={room} now={now} compact/><RaidStatuses room={room} now={now}/></>}
+ {room.host?<RaidStage room={room} now={now} remaining={remaining} strike={strike} onExit={onExit}/>:<><RaidVitals room={room} remaining={remaining} strike={strike} compact noBoss={!!room.me&&['active','paused'].includes(room.status)}/><ClassCombo room={room} now={now} compact/><WeakBanner room={room} now={now} compact/><SkillBanner room={room} now={now} compact/><SkillSweep room={room} now={now} compact/><RaidStatuses room={room} now={now}/></>}
  {room.host&&<div className="raid-host-controls">{room.status==='waiting'&&<button className="primary-button" disabled={busy||!connected||!room.members.length} onClick={safely(()=>action('start'))}><Play size={17}/>全員出發，開始討伐</button>}{room.status==='active'&&<button disabled={busy||!connected} onClick={safely(()=>action('pause'))}><Pause size={17}/>暫停討伐</button>}{room.status==='paused'&&<button className="primary-button" disabled={busy||!connected} onClick={safely(()=>action('resume'))}><Play size={17}/>繼續討伐</button>}{live(room.status)&&<button className="raid-cancel" disabled={busy||!connected} onClick={()=>{if(window.confirm('提前結束這場討伐？已結算的 XP 與食物保留，但不發雙榜獎勵。'))action('cancel').catch(()=>{});}}>提前結束</button>}<span>題庫：{room.bankTitle}</span></div>}
  </section>
+ {!room.host&&room.me&&['active','paused'].includes(room.status)&&<MyRaidStrip room={room}/>}
  {room.status==='waiting'&&<div className="raid-waiting"><Flag size={23}/><div><h2>{room.host?'等大家準備好，就一起出發。':'已加入隊伍，等老師開始吧！'}</h2><p>{room.host?'投影房間碼，學生用自己的帳號登入後加入。':'可用固定夥伴或已收服角色。開始後本場角色固定，答錯不扣全班護盾。'}</p></div></div>}
  {room.me&&room.status==='waiting'&&<WaitingPartner cloud={cloud} member={room.members.find(m=>m.id===user.id)} busy={busy||!connected} change={body=>action('partner',body)}/>} 
  {room.status==='paused'&&<div className="raid-pause-banner"><Pause/>討伐暫停中，題目與反擊時間都會一起暫停。</div>}
