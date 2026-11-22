@@ -75,10 +75,10 @@ function WaitingPartner({cloud,member,busy,change}){
 }
 // 討伐結束後：老師開了下一場時，學生不用輸入新代碼，按一下就用同一個出戰角色加入。
 function NextRoomJoin({room,member,busy,perform}){
- const [next,setNext]=useState(null);
+ const [next,setNext]=useState(null),box=useRef(null);useEffect(()=>{if(next?.code)box.current?.scrollIntoView({behavior:'smooth',block:'center'});},[next?.code]);
  useEffect(()=>{let stop=false,t;const check=()=>api(`/raid/${room.code}/after`).then(r=>{if(!stop)setNext(r.next);}).catch(()=>{}).finally(()=>{if(!stop)t=setTimeout(check,4000);});check();return()=>{stop=true;clearTimeout(t);};},[room.code]);
  if(!next)return <div className="raid-next-wait" role="status"><RefreshCw size={16}/>老師開下一場時，這裡會出現「加入下一場」按鈕，不用再輸入房間碼。</div>;
- return <div className="raid-next-room" role="alert"><Flag size={26}/><div><strong>老師開了下一場討伐！</strong><span>房間碼 {next.code} · {next.status==='waiting'?'正在集結':'已經開打'} · 出戰角色：{member?.nickname||member?.partner.zhName}</span></div><button className="primary-button" disabled={busy} onClick={()=>perform(`/raid/${next.code}/join`,{playerId:member?.partner.id}).catch(()=>{})}>一鍵加入下一場<ArrowRight size={17}/></button></div>;
+ return <div ref={box} className="raid-next-room" role="alert"><div className="next-text"><strong><Flag size={30}/>老師開了下一場討伐！</strong><span>房間碼 <b>{next.code}</b> · {next.status==='waiting'?'正在集結':'已經開打'} · 出戰角色：{member?.nickname||member?.partner.zhName}</span></div><span className="next-point" aria-hidden="true">👇 按這裡加入</span><button className="primary-button next-join" disabled={busy} onClick={()=>perform(`/raid/${next.code}/join`,{playerId:member?.partner.id}).catch(()=>{})}>一鍵加入下一場<ArrowRight size={26}/></button></div>;
 }
 function RaidResults({room,user,onRefresh,onExit}){
  const cancelled=room.status==='cancelled',mine=room.me,damageRank=room.rankings?.damage.find(r=>r.id===user.id),healRank=room.rankings?.heal.find(r=>r.id===user.id),food=cancelled?0:(Number(!!damageRank)+Number(!!healRank))*3;

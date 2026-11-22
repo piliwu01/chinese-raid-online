@@ -81,7 +81,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''}`}>
     <div className="stage-boss-aura"/><div className="stage-boss-shadow"/>
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
-    <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3><BossShieldBar room={room} now={now}/></div>
+    <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3></div>
     {taunt&&<div key={taunt.key} className="boss-taunt" role="status">{taunt.text}</div>}
     {room.stunUntil>now&&<span className="boss-condition">💫 暈眩中</span>}
     {room.poisonTicks>0&&<span className="boss-poison">毒霧侵蝕中</span>}
@@ -113,7 +113,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    {counter&&<div key={counter.key} className="counter-announcement"><Shield size={22}/>{counter.text}</div>}
    {room.status==='paused'&&<div className="arena-pause"><span>Ⅱ</span>老師暫停中 · 夥伴原地待命</div>}
    {!['active','paused','waiting'].includes(room.status)&&<div className={`arena-outcome outcome-${room.status}`}><span>{room.status==='won'?'VICTORY':'BATTLE COMPLETE'}</span><strong>{room.status==='won'?'討伐成功！':room.status==='lost'?'護盾耗盡':room.status==='timeout'?'時間到':'本場已結束'}</strong><small>謝謝每一位夥伴的努力</small>{onExit&&<button type="button" className="primary-button exit-main" onClick={onExit}>回到主畫面</button>}</div>}
-   <div className="arena-bottom"><div><i/>{room.status==='active'?'全班即時共鬥':room.status==='waiting'?'夥伴集結中':'共同守護的每一刻'}<small>角色依加入順序固定站位</small></div><p role="status">{last?.text||room.events[0]?.text||'帶著你的夥伴，一起出發。'}</p></div>
+   <div className="arena-bottom"><div><i/>{room.status==='active'?'全班即時共鬥':room.status==='waiting'?'夥伴集結中':'共同守護的每一刻'}<small>角色依加入順序固定站位</small></div><BossShieldBar room={room} now={now}/><p role="status">{last?.text||room.events[0]?.text||'帶著你的夥伴，一起出發。'}</p></div>
   </section>
  </>;
 }
