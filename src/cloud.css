@@ -16,3 +16,8 @@
 /* 選項字體與題目一樣大（2026-11-21）：進化挑戰 */
 .challenge-options button{font-size:23px}
 @media(max-width:700px){.challenge-options button{font-size:20px}}
+/* 2026-11-23 老師修改密碼 */
+.my-password h2{display:flex;align-items:center;gap:8px}
+.my-password input{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid #496078;background:#132233;color:#edf1fa;font-size:15px}
+.my-password .primary-button{margin-top:14px;width:100%;justify-content:center}
+.form-ok{color:#9be7c6!important;line-height:1.8;font-weight:700}
