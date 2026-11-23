@@ -96,18 +96,32 @@ export async function analyze(env,summary,meta){
 // 2026-11-23 學生端「AI 學習健檢」：依自己的題型答對率與錯題，請 AI 找出強項、最需加強的題型與練習建議。
 // 至少答 30 題才開放；每人每天產生 1 次（同一天再看就用快取）；不送姓名、不送答案。
 export const STUDY_CHECK={minAnswered:30};
+// 2026-11-23 AI 建議只能提遊戲裡真的有的玩法（避免 AI 編出「限時模式」等不存在的功能）。
+export const STUDY_GAME=`遊戲裡「只有」下面這些玩法，plan 提到遊戲玩法時只能用這些名稱，絕對不可以自己發明其他模式或功能（例如限時模式、闖關模式、單字卡、測驗卷都不存在）：
+1. 冒險：和野生神獸對戰，每張招式卡上會標示題型，可以挑某種題型的招式卡出招。
+2. 針對弱點練習 20 題：按下後，接下來冒險的招式卡會集中出弱點題型。
+3. 墨漬怪巢穴：答錯的題目會變成墨漬怪，隔天起答對就能淨化。
+4. 破盾弱點：答對敵人弱點題型可以打破護盾。
+5. 全班討伐：上課時全班一起打魔王。
+也可以給不靠遊戲功能的讀題方法（例如先圈出題目的關鍵詞、讀完選項再作答）。`;
+const PLAN_BAD=/模式|限時|計時|倒數|闖關|關卡|影片|app|網站|講義|單字卡|題本|測驗卷|筆記本|練習本/i;
+const planFill=weak=>[weak[0]?`在冒險挑「${weak[0].category}」的招式卡，先答對 10 題`:'在冒險多挑答對率最低的題型招式卡',weak.length?'按「針對弱點練習 20 題」，集中練弱點題型':'到墨漬怪巢穴把答錯的題目淨化',
+ '到墨漬怪巢穴把答錯的題目淨化','讀題時先圈出題目問的關鍵詞，再看選項'];
 export function studyPrompt(summary,wrongs){
  const pct=x=>`${Math.round(x*100)}%`;
  const lines=summary.cats.filter(c=>c.total>0).map(c=>`${c.category}：答對 ${c.right} 題、答錯 ${c.wrong} 題（答對率 ${pct(c.rate)}）`).join('\n');
  const wrong=wrongs.map((w,i)=>`${i+1}. （${w.category||'未分類'}）${w.stem}`).join('\n');
  return [{role:'system',content:STYLE+'你是國中生的國文學習教練，說話親切、具體、鼓勵，但要誠實指出問題。只根據提供的數據與錯題，不要編造數字，不要給出任何題目的答案。'},
-  {role:'user',content:`這位國中生最近在國文複習遊戲的表現：總共作答 ${summary.answered} 題，答對率 ${pct(summary.accuracy||0)}，近 7 天有 ${summary.activeDays7} 天練習。\n\n各題型表現：\n${lines}\n\n最近答錯、還沒弄懂的題目：\n${wrong||'（沒有）'}\n\n請只輸出一段 JSON，不要有其他文字，格式：{"strength":"一到兩句，說他的強項","weak":[{"category":"題型名稱（必須是上面出現過的題型）","reason":"從錯題看出的共通問題，一到兩句"}],"plan":["本週具體練習建議 1","建議 2","建議 3"]}。weak 最多 2 項，挑答對率最低、題數夠多的題型；plan 每句不超過 40 字，要能直接照做（例如在冒險選哪種題型的招式卡、先淨化哪些墨漬怪）。`}];
+  {role:'user',content:`這位國中生最近在國文複習遊戲的表現：總共作答 ${summary.answered} 題，答對率 ${pct(summary.accuracy||0)}，近 7 天有 ${summary.activeDays7} 天練習。\n\n各題型表現：\n${lines}\n\n最近答錯、還沒弄懂的題目：\n${wrong||'（沒有）'}\n\n請只輸出一段 JSON，不要有其他文字，格式：{"strength":"一到兩句，說他的強項","weak":[{"category":"題型名稱（必須是上面出現過的題型）","reason":"從錯題看出的共通問題，一到兩句"}],"plan":["本週具體練習建議 1","建議 2","建議 3"]}。weak 最多 2 項，挑答對率最低、題數夠多的題型；plan 每句不超過 40 字，要能直接照做。
+
+${STUDY_GAME}`}];
 }
 export function parseStudy(text,cats){
  const m=String(text||'').match(/\{[\s\S]*\}/);if(!m)return null;
  try{const j=JSON.parse(m[0]);const names=new Set(cats.map(c=>c.category));
   const weak=(Array.isArray(j.weak)?j.weak:[]).filter(w=>w&&names.has(String(w.category))).slice(0,2).map(w=>({category:String(w.category),reason:cleanText(String(w.reason||''),120)}));
-  const plan=(Array.isArray(j.plan)?j.plan:[]).map(p=>cleanText(String(p),60)).filter(Boolean).slice(0,3);
+  const plan=(Array.isArray(j.plan)?j.plan:[]).map(p=>cleanText(String(p),60)).filter(p=>p&&!PLAN_BAD.test(p)).slice(0,3);
+  for(const f of planFill(weak)){if(plan.length>=3)break;if(!plan.includes(f))plan.push(f);}
   const strength=cleanText(String(j.strength||''),120);
   return strength||weak.length||plan.length?{strength,weak,plan}:null;
  }catch{return null;}

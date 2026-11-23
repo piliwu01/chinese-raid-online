@@ -35,3 +35,9 @@ test('focus practice: only practised categories, cards come from them for 20 que
  applyAction(s,'/study/focus',{cats:['對聯']},Date.now());applyAction(s,'/study/focus/clear',{},Date.now());assert.equal(s.studyFocus,null);
 });
 test('minimum answered is 30',()=>assert.equal(STUDY_CHECK.minAnswered,30));
+test('AI plan only keeps real game features; made-up modes are replaced',()=>{
+ const r=parseStudy('{"strength":"s","weak":[{"category":"修辭","reason":"r"}],"plan":["使用文意練習模式，限時答題","每天看一部影片","讀題先圈關鍵詞"]}',cats);
+ assert.equal(r.plan.length,3);assert.equal(r.plan[0],'讀題先圈關鍵詞');
+ assert.ok(r.plan.every(p=>!/模式|限時|影片/.test(p)));assert.match(r.plan[1],/修辭/);
+ assert.match(studyPrompt({answered:40,accuracy:.5,activeDays7:3,cats:[]},[])[1].content,/墨漬怪巢穴/);
+});
