@@ -1,13 +1,14 @@
 // 本週山海魔王（2026-11-23）：每班每週一隻，全班在家各自答題，傷害累積到共同血條。純函式，前後端共用。
 // - 開放：週一 00:00 ～ 週日 22:00（台北時間），週日 22:00 結算。
-// - 血量：班上學生人數 × 300；答對依難度 8／10／20，本週弱點題型 ×2；答錯不扣分、不反擊；不設每日上限。
+// - 2026-11-23 改版：不另外答題。學生在「冒險」個人對戰打到野生神獸的傷害，有 50% 同時打到本週山海魔王（本週弱點題型再 ×2）。
+// - 血量：班上學生人數 × 300；答錯不扣分；不設每日上限。
 // - 獎勵：本週答對至少 20 題才能領。打倒：寶箱 1、玉符 1、食物 3，貢獻前 3 名加「山海魔王勇者」稱號；沒打倒：食物 2。
 import {weekStart} from './hero.js';
 import {luckyOf,addChest} from './lucky.js';
 
 export const WORLD = {
   hpPerStudent: 300, rewardMin: 20, top: 3, title: '山海魔王勇者',
-  damage: { easy: 8, medium: 10, hard: 20 }, weakMult: 2,
+  share: 0.5, weakMult: 2,
   win: { chest: 1, jade: 1, food: 3 }, lose: { food: 2 },
   firstWeek: '2026-11-23',
   bosses: [
@@ -36,9 +37,10 @@ export function pickWeak(pool, week, className) {
   let h = 7; for (const c of `${week}|${className}`) h = (h * 31 + c.codePointAt(0)) >>> 0;
   return pool[h % pool.length];
 }
-export function damageFor(difficulty, category, weak) {
-  const base = WORLD.damage[difficulty] || WORLD.damage.medium;
-  return base * (weak && category === weak ? WORLD.weakMult : 1);
+// 冒險傷害分給山海魔王：50%，本週弱點題型 ×2。
+export function shareDamage(damage, category, weak) {
+  if (!(damage > 0)) return 0;
+  return Math.max(1, Math.round(damage * WORLD.share * (weak && category === weak ? WORLD.weakMult : 1)));
 }
 
 // 結算：回傳 { won, awards:[{userId, won, top, damage, correct}] }。hits：[{userId, damage, correct}]

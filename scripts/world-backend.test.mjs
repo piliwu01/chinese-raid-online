@@ -16,17 +16,19 @@ test('world boss integration: class-wide damage, teacher view, idempotent settle
   async function call(path,body,cookie=''){const r=await mf.dispatchFetch('http://localhost/api'+path,{method:'POST',headers:{cookie,'X-QuizSpirit':'1',Origin:'http://localhost','Content-Type':'application/json'},body:JSON.stringify(body||{})});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
   const login=async id=>(await call('/login',{username:id,password:pw})).cookie;const [t1,s1,s2,x1]=await Promise.all(['t1','s1','s2','x1'].map(login));
   const week=worldWeek();
-  await t.test('boss HP = class size × 300; a correct hard answer deals 20 (40 on weak) and replays count once',async()=>{
-   const v=await call('/world/view',{},s1);assert.equal(v.status,200);assert.equal(v.data.maxHp,900);assert.equal(v.data.hp,900);assert.ok(['成語','修辭'].includes(v.data.weak));
-   const q=(await call('/world/question',{bankId:bank.bankId,difficulty:'hard',requestId:crypto.randomUUID()},s1)).data.event.question;
-   const body={questionId:q.id,choice:right(q),bankId:bank.bankId,requestId:crypto.randomUUID()};const a=await call('/world/answer',body,s1);assert.equal(a.status,200);
-   const dmg=a.data.event.world.damage;assert.ok(dmg===20||dmg===40);const again=await call('/world/answer',body,s1);assert.equal(again.data.replayed,true);
+  await t.test('boss HP = class size × 300; adventure damage is shared at 50% (x2 on weak) and replays count once',async()=>{
+   const v=await call('/world/view',{},s1);assert.equal(v.status,200);assert.equal(v.data.maxHp,900);assert.equal(v.data.hp,900);assert.ok(['成語','修辭'].includes(v.data.weak));assert.equal(v.data.rules.share,0.5);
+   await call('/battle/start',{chapter:1,heal:true,bankId:bank.bankId,requestId:crypto.randomUUID()},s1);
+   const q=(await call('/question',{move:'critical',bankId:bank.bankId,requestId:crypto.randomUUID()},s1)).data.event.question;
+   const body={questionId:q.id,choice:right(q),bankId:bank.bankId,requestId:crypto.randomUUID()};const a=await call('/answer',body,s1);assert.equal(a.status,200);
+   const e=a.data.event,dmg=e.world.damage;assert.equal(dmg,Math.min(900,Math.max(1,Math.round(e.combat.damage*0.5*(e.world.weak?2:1)))));
+   const again=await call('/answer',body,s1);assert.equal(again.data.replayed,true);
    const v2=await call('/world/view',{},s2);assert.equal(v2.data.damage,dmg,'重送不重複計傷害，同班看得到');assert.equal(v2.data.participants,1);
    const other=await call('/world/view',{},x1);assert.equal(other.data.damage,0,'別班看不到');
+   assert.equal((await call('/world/question',{bankId:bank.bankId,requestId:crypto.randomUUID()},s1)).status,404,'不再另外答題');
   });
-  await t.test('teacher views a class with every contributor; teachers cannot attack',async()=>{
+  await t.test('teacher views a class with every contributor',async()=>{
    const v=await call('/world/view',{className:'313'},t1);assert.equal(v.status,200);assert.equal(v.data.top.length,1);assert.equal(v.data.top[0].id,'s1');
-   assert.equal((await call('/world/question',{bankId:bank.bankId,requestId:crypto.randomUUID()},t1)).status,403);
   });
   await t.test('math-auto is retired: battles without a bank or with math-auto use the default Chinese bank',async()=>{
    for(const bankId of [undefined,'math-auto']){const st=await call('/battle/start',{chapter:1,heal:true,bankId,requestId:crypto.randomUUID()},s2);assert.equal(st.status,200);

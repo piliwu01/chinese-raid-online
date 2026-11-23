@@ -64,6 +64,6 @@ export async function worldView(env,user,body={},now=Date.now()){
  const last=await db.prepare('SELECT s.week,s.won,s.total,b.max_hp,b.boss FROM world_settled s JOIN world_bosses b ON b.week=s.week AND b.class_name=s.class_name WHERE s.class_name=? ORDER BY s.week DESC LIMIT 1').bind(className).first();
  return {className,week,open,startsAt:win.start,endsAt:win.end,serverNow:now,boss:{id:info.id,name:info.name,line:info.line},maxHp:boss.max_hp,damage:Math.min(total,boss.max_hp),hp:Math.max(0,boss.max_hp-total),defeated:total>=boss.max_hp,weak:boss.weak,
   participants:rows.filter(r=>r.correct>0).length,classSize:await studentCount(db,className),me:meRow||{damage:0,correct:0,rank:null},
-  top:user.role==='teacher'?list:list.slice(0,5),rules:{rewardMin:WORLD.rewardMin,damage:WORLD.damage,weakMult:WORLD.weakMult,win:WORLD.win,lose:WORLD.lose,top:WORLD.top,title:WORLD.title},
+  top:user.role==='teacher'?list:list.slice(0,5),rules:{rewardMin:WORLD.rewardMin,share:WORLD.share,weakMult:WORLD.weakMult,win:WORLD.win,lose:WORLD.lose,top:WORLD.top,title:WORLD.title},
   lastWeek:last?{week:last.week,won:!!last.won,total:last.total,maxHp:last.max_hp,boss:(WORLD.bosses.find(b=>b.id===last.boss)||{}).name||''}:null};
 }

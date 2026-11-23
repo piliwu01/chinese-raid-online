@@ -927,3 +927,9 @@ body.battle-focus .fighter-status .status-chip{font-size:calc(12px * var(--bf,1)
 .enc-go{justify-content:center;gap:8px;font-size:21px;min-height:58px}
 @media(max-width:600px){.encounter-card{padding:16px}.enc-head h2{font-size:24px}.enc-icon{font-size:42px}.enc-options{grid-template-columns:1fr}.enc-options button b{font-size:19px}.enc-body h3{font-size:20px}.enc-intro,.enc-result p{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.encounter-card,.enc-icon{animation:none}}
+/* 2026-11-23 冒險傷害同步打山海魔王 */
+.world-hit-pop{position:absolute;right:4%;top:44%;z-index:15;padding:6px 14px;border-radius:999px;background:#3a1d3ce6;border:2px solid #ffb3d1;color:#ffe3f0;font-weight:900;font-size:calc(17px * var(--bf,1));white-space:nowrap;pointer-events:none;box-shadow:0 0 16px #e0558a66;animation:worldPop 1.8s ease-out forwards}
+.world-hit-pop.is-weak{border-color:#ffd76a;color:#fff1c2}
+@keyframes worldPop{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
+@media(max-width:760px){.world-hit-pop{top:auto;bottom:10px;right:8px;font-size:13px;padding:4px 10px}}
+@media(prefers-reduced-motion:reduce){.world-hit-pop{animation:worldPop 1.8s steps(1) forwards}}
