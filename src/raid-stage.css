@@ -367,3 +367,39 @@
 .stage-statuses .status-chips.is-row{gap:5px}
 @media(max-width:600px){.formation-title .team-status .sc-label{display:none}.stage-boss>.boss-status .sc-label{display:none}}
 .stage-boss>.boss-status{z-index:7}
+/* 2026-11-23 魔王反擊更浮誇：蓄力預告、招式名、墨球彈幕 */
+.boss-charge{position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;opacity:0;z-index:3}
+.boss-charge i{position:absolute;inset:0;border-radius:50%;border:4px solid #ff3b5c;box-shadow:0 0 30px #ff3b5caa,inset 0 0 30px #ff3b5c66;opacity:0}
+.boss-charge b{position:absolute;left:50%;bottom:-6%;transform:translateX(-50%);white-space:nowrap;padding:4px 14px;border-radius:999px;background:#3a0a14e6;border:2px solid #ff6b81;color:#ffd5dc;font-size:clamp(13px,1.4cqw,22px);font-weight:900;letter-spacing:2px}
+.raid-arena.is-charging .boss-charge{opacity:1}
+.raid-arena.is-charging .boss-charge i{animation:chargeIn 1s ease-in infinite}
+.raid-arena.is-charging .boss-charge i:nth-child(2){animation-delay:.33s}.raid-arena.is-charging .boss-charge i:nth-child(3){animation-delay:.66s}
+@keyframes chargeIn{0%{transform:scale(1.6);opacity:0}40%{opacity:.9}100%{transform:scale(.35);opacity:0}}
+.raid-arena.is-charging::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at 24% 52%,transparent 18%,#14040acc 75%);animation:chargeDim 3s ease-in forwards}
+@keyframes chargeDim{from{opacity:0}to{opacity:1}}
+.raid-arena.is-charging .stage-boss img{filter:drop-shadow(0 0 18px #ff2d55) drop-shadow(0 0 40px #ff2d5588) saturate(1.3);animation:chargeShake .18s linear infinite}
+@keyframes chargeShake{50%{transform:translate(2px,-1px)}}
+.raid-arena.is-phase2.is-charging .boss-charge i{border-color:#ff9a3b;box-shadow:0 0 40px #ff9a3bcc}
+.fx-inkorbs{position:absolute;inset:0;pointer-events:none;z-index:6}
+.fx-inkorbs i{position:absolute;left:23%;top:46%;width:clamp(16px,2.2cqw,34px);aspect-ratio:1;margin:-1.1cqw 0 0 -1.1cqw;opacity:0;animation:inkOrb .62s cubic-bezier(.5,0,.8,.4) forwards}
+.fx-inkorbs i b{display:block;width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#6b5a8c,#1a0f2a 60%,#000 100%);box-shadow:0 0 14px #b04cff,0 0 4px #000}
+@keyframes inkOrb{0%{opacity:0;left:23%;top:46%;transform:scale(.4)}12%{opacity:1}85%{opacity:1;transform:scale(1)}100%{opacity:0;left:var(--x1);top:var(--y1);transform:scale(1.8)}}
+.stage-unit.is-inkhit .unit-sprite{animation:inkHit .5s ease-out both;animation-delay:var(--hit-delay,500ms)}
+@keyframes inkHit{0%{transform:none;filter:none}20%{transform:translateX(14px) rotate(6deg);filter:brightness(.35) sepia(1) hue-rotate(220deg) saturate(3)}60%{transform:translateX(-4px);filter:brightness(.7)}100%{transform:none;filter:none}}
+.stage-unit.is-inkhit::after{content:'';position:absolute;left:50%;top:30%;width:calc(var(--sprite-size,60px)*1.1);aspect-ratio:1;transform:translate(-50%,-50%) scale(0);border-radius:50%;background:radial-gradient(circle,#2a1640ee 30%,#2a164000 70%);animation:inkSplat .6s ease-out forwards;animation-delay:var(--hit-delay,500ms);pointer-events:none;z-index:4}
+@keyframes inkSplat{0%{transform:translate(-50%,-50%) scale(0);opacity:1}60%{transform:translate(-50%,-50%) scale(1.1);opacity:.9}100%{transform:translate(-50%,-50%) scale(1.3);opacity:0}}
+.skill-sweep.is-attack .sweep-band{background:linear-gradient(90deg,transparent,#1a0610f0 12%,#5a0a1ef5 50%,#1a0610f0 88%,transparent)!important;border-color:#ff5a6a}
+.skill-sweep.is-attack .sweep-text strong{color:#fff;text-shadow:0 0 22px #ff2d55,4px 4px 0 #3a0410}
+.reduced-motion .boss-charge i,.reduced-motion.is-charging::after,.reduced-motion.is-charging .stage-boss img{animation:none!important}
+.reduced-motion .fx-inkorbs,.reduced-motion .stage-unit.is-inkhit::after{display:none}
+.reduced-motion .stage-unit.is-inkhit .unit-sprite{animation:none}
+/* 學生手機：魔王反擊受擊與蓄力警告 */
+.boss-charge-warn{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:70;padding:8px 16px;border-radius:999px;background:#3a0a14f0;border:2px solid #ff5a6a;color:#ffe0e5;font-weight:900;font-size:15px;white-space:nowrap;box-shadow:0 0 18px #ff2d5588;animation:warnPulse .6s ease-in-out infinite alternate;pointer-events:none}
+@keyframes warnPulse{to{box-shadow:0 0 30px #ff2d55cc;transform:translateX(-50%) scale(1.04)}}
+.boss-hit-flash{position:fixed;inset:0;z-index:75;pointer-events:none;display:grid;place-items:center}
+.bhf-edge{position:absolute;inset:0;box-shadow:inset 0 0 80px 30px #ff1f3dcc;animation:bhfEdge 1.6s ease-out forwards}
+@keyframes bhfEdge{0%{opacity:0}10%{opacity:1}100%{opacity:0}}
+.bhf-text{position:relative;padding:12px 20px;border-radius:16px;background:#2a0710ee;border:2px solid #ff6b81;color:#fff;font-size:19px;font-weight:900;text-align:center;max-width:86vw;box-shadow:0 10px 30px #0008;animation:bhfText 1.6s ease-out forwards}
+@keyframes bhfText{0%{opacity:0;transform:scale(1.4)}15%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+@media(prefers-reduced-motion:reduce){.boss-charge-warn{animation:none}.bhf-edge,.bhf-text{animation-duration:.9s}}
+.boss-charge-warn{top:auto;bottom:18px}

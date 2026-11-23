@@ -40,6 +40,8 @@ export function RaidStatuses({room,now}){
  if(!boss.length&&!team.length)return null;
  return <div className="stage-statuses">{boss.length>0&&<StatusChips items={boss} label="魔王狀態" className="is-row"/>}{team.length>0&&<StatusChips items={team} label="全班狀態" className="is-row is-team"/>}</div>;
 }
+// 魔王反擊的招式名（只是演出，依事件序號輪流）。
+export const BOSS_ATTACKS=['墨浪滔天','千字狂潮','筆鋒亂舞','硯海翻騰','卷軸風暴','墨龍出淵'];
 const TAUNT_FALLBACK={start:'區區學子，也敢挑戰本座？',boss:'墨浪滔天，看你們如何招架！',phase:'本座怒矣！墨焰焚書！',ultimate:'這……這是什麼合體之術！',low:'本座……尚未言敗！'};
 function useBossTaunt(room,incoming){
  const [line,setLine]=useState(null),last=useRef({at:0,kinds:new Set()}),code=room.code;
@@ -76,7 +78,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
  return <>
   <RaidVitals room={room} remaining={remaining} strike={strike}/><ActionTimeline room={room} now={now}/>
   <ClassCombo room={room} now={now}/>
-  <section ref={arenaRef} className={`raid-arena ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.members.length>36?'is-crowded':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
+  <section ref={arenaRef} className={`raid-arena ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.status==='active'&&room.nextAttackAt&&room.nextAttackAt-now>0&&room.nextAttackAt-now<=3000&&!(room.stunUntil>now)?'is-charging':''} ${room.members.length>36?'is-crowded':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
    <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BreakSweep room={room} now={now}/><BossIntro room={room} now={now}/>
@@ -86,11 +88,12 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
     <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3></div>
     {taunt&&<div key={taunt.key} className="boss-taunt" role="status">{taunt.text}</div>}
+    <div className="boss-charge" aria-hidden="true"><i/><i/><i/><b>魔王蓄力中…</b></div>
    </div>
    <div className="formation-title"><Users size={14}/>我們的隊伍 <b>{room.members.length}</b><span>{room.members.filter(m=>m.online).length} 人在線</span><StatusChips items={teamStatusItems(room,now)} label="全班狀態" className="team-status"/></div>
    {positions.map(m=>{
     const action=effects.filter(e=>e.actorId===m.id).at(-1),attacking=(action&&['hit','strong','fire'].includes(action.type))||!!ultimate,supporting=action&&!attacking;
-    return <div key={m.id} className={`stage-unit ${attacking?'is-attacking':''} ${supporting?'is-supporting':''} ${m.online?'is-online':'is-offline'}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--sprite-size':`${spriteSize}px`}} data-member-id={m.id}>
+    return <div key={m.id} className={`stage-unit ${attacking?'is-attacking':''} ${supporting?'is-supporting':''} ${m.online?'is-online':'is-offline'} ${counter?'is-inkhit':''}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--sprite-size':`${spriteSize}px`,'--hit-delay':`${520+(positions.indexOf(m)%12)*70}ms`}} data-member-id={m.id}>
      <div className="unit-plinth"/><div className="unit-sprite" key={ultimate?`u${ultimate.key}`:action?.key||'idle'}><img className={`idle-${motionFor(m.partner.type)}${m.partner.shiny?' is-shiny':''}`} style={idleStyle(m.partner.id+m.x)} src={`/assets/${m.partner.id}.png`} alt={`${m.name}的${m.nickname||m.partner.zhName}`} loading="eager"/></div>
      <span className="unit-name" title={m.name}><i/>{m.name}</span><small className="unit-partner">{m.title?<em className="unit-title">「{m.title}」</em>:null}{m.nickname||m.partner.zhName}</small>
     </div>;
@@ -108,9 +111,11 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
     </div>;})}
     {ultimate&&<div key={ultimate.key} className="fx-ultimate">{positions.map(m=>{const fx=fxFor(m.partner?.type);return <div key={m.id} className={`fx-shot fx-${fx.kind==='bolt'?'orb':fx.kind} is-strong`} style={{'--x0':`${m.x}%`,'--y0':`${m.y-5}%`,'--fx':fx.color,'--fx-glow':fx.glow}}><i style={{animationDelay:`${(m.joinOrder||0)%6*40}ms`}}><b/></i></div>;})}<div className="ult-flash"/><div className="ult-burst"/><div className="ult-text"><small>全班合體技！</small><strong>−{ultimate.value}</strong><span>魔王暈眩 10 秒</span></div></div>}
     {phaseFx&&<div key={phaseFx.key} className="phase-announce"><small>PHASE 2</small><strong>墨卷魔神暴走了！</strong><span>攻擊力 ×1.5 · 反擊加快{phaseFx.weak?` · 弱點：${phaseFx.weak}題 傷害 ×2`:''}</span></div>}
+    {counter&&<div key={'o'+counter.key} className="fx-inkorbs">{positions.map((m,i)=><i key={m.id} style={{'--x1':`${m.x}%`,'--y1':`${m.y-4}%`,animationDelay:`${(i%12)*70}ms`}}><b/></i>)}</div>}
     {counter&&<div key={counter.key} className="fx-ink">{INK.map((b,i)=><i key={i} style={{left:`${b[0]}%`,top:`${b[1]}%`,'--s':b[2],animationDelay:`${b[3]}ms`}}/>)}<div className="fx-vignette"/></div>}
    </div>
    <div className="stage-floats" aria-hidden="true">{effects.map(e=>{const m=members.get(e.actorId);if(!m)return null;return <div key={e.key} data-actor-id={e.actorId} data-event-sequence={e.sequence} className={`stage-float float-${e.type}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--float-shift':`${(e.sequence%3-1)*8}px`}}><span>{m.name}</span><b>{effectLabel(e)}</b></div>;})}</div>
+   {counter&&<div key={'w'+counter.key} className="skill-sweep is-attack" role="status"><div className="sweep-band"><span className="sweep-icon" aria-hidden="true">🌊</span><div className="sweep-text"><small>墨卷魔神 · 反擊</small><strong>{BOSS_ATTACKS[(counter.sequence||0)%BOSS_ATTACKS.length]}</strong></div></div></div>}
    {counter&&<div key={counter.key} className="counter-announcement"><Shield size={22}/>{counter.text}</div>}
    {room.status==='paused'&&<div className="arena-pause"><span>Ⅱ</span>老師暫停中 · 夥伴原地待命</div>}
    {!['active','paused','waiting'].includes(room.status)&&<div className={`arena-outcome outcome-${room.status}`}><span>{room.status==='won'?'VICTORY':'BATTLE COMPLETE'}</span><strong>{room.status==='won'?'討伐成功！':room.status==='lost'?'護盾耗盡':room.status==='timeout'?'時間到':'本場已結束'}</strong><small>謝謝每一位夥伴的努力</small>{onExit&&<button type="button" className="primary-button exit-main" onClick={onExit}>回到主畫面</button>}</div>}

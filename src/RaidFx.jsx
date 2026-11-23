@@ -124,3 +124,22 @@ export function ActionTimeline({ room, now, compact = false }) {
     </div>
   );
 }
+
+// 學生手機：魔王反擊的瞬間畫面四周閃紅、跳出扣盾文字，Android 手機輕震一下；反擊前 3 秒先出現警告條。
+export function BossHitFlash({ room, now }) {
+  const [hit, setHit] = useState(null), seen = useRef(null);
+  const ev = room.events?.find(e => e.type === 'boss');
+  useEffect(() => {
+    if (!ev || seen.current === ev.sequence) return;
+    const first = seen.current === null; seen.current = ev.sequence;
+    if (first || now - ev.at > 3000) return; // 剛打開畫面不補播
+    setHit({ key: ev.sequence, text: ev.text });
+    if (!reduced() && typeof navigator !== 'undefined' && navigator.vibrate) { try { navigator.vibrate([120, 60, 160]); } catch {} }
+  }, [ev?.sequence]);
+  useEffect(() => { if (!hit) return; const t = setTimeout(() => setHit(null), reduced() ? 900 : 1600); return () => clearTimeout(t); }, [hit?.key]);
+  const charging = room.status === 'active' && room.nextAttackAt && room.nextAttackAt - now > 0 && room.nextAttackAt - now <= 3000 && !(room.stunUntil > now);
+  return <>
+    {charging && <div className="boss-charge-warn" role="status">⚠️ 魔王蓄力中，{Math.ceil((room.nextAttackAt - now) / 1000)} 秒後反擊！</div>}
+    {hit && <div key={hit.key} className="boss-hit-flash" role="alert"><div className="bhf-edge" /><div className="bhf-text">🌊 {hit.text}</div></div>}
+  </>;
+}
