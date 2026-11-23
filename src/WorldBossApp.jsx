@@ -75,7 +75,7 @@ export default function WorldBossApp({ user, banks, act, busy, onExit }) {
                 <strong>{fb.correct ? (fb.world?.damage ? `答對了！對${view.boss.name}造成 ${fb.world.damage} 點傷害${fb.world.weak ? '（弱點加倍）' : ''}` : '答對了！山海魔王已經倒下，經驗值照拿') : fb.timedOut ? '時間到了，一起看看答案。' : '沒關係，答錯不扣分，再來一題！'}</strong>
                 <p>正確答案：{fb.answerText}</p>{fb.explanation && <p className="wb-expl">{fb.explanation}</p>}<AiTutor feedback={fb} />
               </div>}
-              <label className="wb-bank">題庫<select value={bank} onChange={e => setBank(e.target.value)}>{banks.filter(b => b.count > 0).map(b => <option key={b.bankId} value={b.bankId}>{b.title}</option>)}<option value="math-auto">自動數學練習</option></select></label>
+              <label className="wb-bank">題庫<select value={bank} onChange={e => setBank(e.target.value)}>{banks.filter(b => b.count > 0).map(b => <option key={b.bankId} value={b.bankId}>{b.title}</option>)}</select></label>
               <div className="wb-diffs" role="group" aria-label="選擇難度">{DIFFS.map(([k, label]) => <button key={k} type="button" aria-pressed={diff === k} className={diff === k ? 'active' : ''} onClick={() => setDiff(k)}>{label}<small>{view.rules.damage[k]} 傷害</small></button>)}</div>
               <button className="primary-button wb-go" disabled={busy} onClick={ask}><Swords size={20} />{fb ? '下一題，繼續出手' : '開始出手'}</button>
               <small>答錯不扣分、不會被反擊；答題經驗值和錯題本照常累積。</small>

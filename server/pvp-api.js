@@ -1,4 +1,4 @@
-import {sha} from './auth.js';import {ownedSpirit} from '../shared/ownership.js';import {partnerFor,levelFor} from '../src/growth.js';import {PVP,pvpLive,pvpError} from '../shared/pvp-rules.js';import {activeActivity,claimActivity,releaseActivity} from './activity.js';
+import {sha} from './auth.js';import {pickBankId} from './banks.js';import {ownedSpirit} from '../shared/ownership.js';import {partnerFor,levelFor} from '../src/growth.js';import {PVP,pvpLive,pvpError} from '../shared/pvp-rules.js';import {activeActivity,claimActivity,releaseActivity} from './activity.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const actor=user=>({id:user.id,name:user.display_name,className:user.class_name,role:user.role,tokenHash:user.token_hash,sessionExpires:user.session_expires});
 export const pvpStub=(env,code)=>env.PVPS.get(env.PVPS.idFromName(code));
@@ -13,7 +13,7 @@ export async function handlePvp(req,env,user,path,body){
  }
  if(path==='/pvp/create'&&req.method==='POST'){
   if(!validId(body.requestId))pvpError('操作識別無效。');if(!user.class_name)pvpError('請先請老師設定班級。');
-  const bankId=String(body.bankId||'math-auto'),playerId=body.playerId===undefined?undefined:Number(body.playerId),fingerprint=await sha(JSON.stringify({bankId,playerId}));
+  const bankId=await pickBankId(env.DB,body.bankId),playerId=body.playerId===undefined?undefined:Number(body.playerId),fingerprint=await sha(JSON.stringify({bankId,playerId}));
   const previous=await env.DB.prepare('SELECT code,body_hash,config FROM pvp_rooms WHERE host_id=? AND request_id=?').bind(user.id,body.requestId).first();if(previous){if(previous.body_hash!==fingerprint)pvpError('操作識別內容不一致。',409);return forward(env,previous.code,'/init',user,JSON.parse(previous.config));}
   if(await activeActivity(env,user))pvpError('請先完成或離開原本的戰鬥房間。',409);
   const row=await env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data),fixed=partnerFor(state.growth);if(!fixed)pvpError('請先選定養成夥伴。');needLevel(state);const partner=playerId===undefined?fixed:ownedSpirit(state,playerId);if(!partner)pvpError('只能選擇自己的固定夥伴或已收服角色。',403);

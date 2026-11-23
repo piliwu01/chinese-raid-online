@@ -28,6 +28,10 @@ test('world boss integration: class-wide damage, teacher view, idempotent settle
    const v=await call('/world/view',{className:'313'},t1);assert.equal(v.status,200);assert.equal(v.data.top.length,1);assert.equal(v.data.top[0].id,'s1');
    assert.equal((await call('/world/question',{bankId:bank.bankId,requestId:crypto.randomUUID()},t1)).status,403);
   });
+  await t.test('math-auto is retired: battles without a bank or with math-auto use the default Chinese bank',async()=>{
+   for(const bankId of [undefined,'math-auto']){const st=await call('/battle/start',{chapter:1,heal:true,bankId,requestId:crypto.randomUUID()},s2);assert.equal(st.status,200);
+    const q=(await call('/question',{move:'quick',bankId,requestId:crypto.randomUUID()},s2)).data.event.question;assert.ok(q.optionTexts,'出國文題');assert.ok(Object.values(q.optionTexts).includes('正確'));}
+  });
   await t.test('a finished past week settles once; 20+ correct students claim once',async()=>{
    const past='2026-11-16';await db.prepare('INSERT INTO world_bosses(week,class_name,max_hp,boss,weak,created_at) VALUES(?,?,?,?,?,?)').bind(past,'313',900,'taotie','成語',1).run();
    await db.batch([['s1',600,30],['s2',300,20],['s3',100,5]].map(([u,d,c])=>db.prepare('INSERT INTO world_hits(week,class_name,user_id,damage,correct,answered,updated_at) VALUES(?,?,?,?,?,?,?)').bind(past,'313',u,d,c,c,1)));

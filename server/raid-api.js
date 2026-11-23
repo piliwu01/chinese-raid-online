@@ -1,4 +1,4 @@
-import {sha} from './auth.js';import {RAID,live,raidError} from '../shared/raid-rules.js';
+import {sha} from './auth.js';import {pickBankId} from './banks.js';import {RAID,live,raidError} from '../shared/raid-rules.js';
 import {ownedSpirit} from '../shared/ownership.js';
 import {claimActivity,releaseActivity} from './activity.js';
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -14,7 +14,7 @@ export async function handleRaid(req,env,user,path,body){
  }
  if(path==='/raid/create'&&req.method==='POST'){
   if(user.role!=='teacher')raidError('只有老師可以開房。',403);if(!validId(body.requestId))raidError('操作識別無效。');
-  const className=String(body.className||'').trim(),minutes=Number(body.minutes??10),customHp=body.bossHp?Number(body.bossHp):null,bankId=String(body.bankId||'math-auto');
+  const className=String(body.className||'').trim(),minutes=Number(body.minutes??10),customHp=body.bossHp?Number(body.bossHp):null,bankId=await pickBankId(env.DB,body.bankId);
   if(!className||className.length>30||!Number.isInteger(minutes)||minutes<1||minutes>30||(customHp!==null&&(!Number.isInteger(customHp)||customHp<50||customHp>100000)))raidError('請填班級、1～30 分鐘時間，以及有效魔王血量。');
   let bankTitle='自動數學練習';if(bankId!=='math-auto'){const bank=await env.DB.prepare('SELECT title,data FROM banks WHERE id=?').bind(bankId).first();if(!bank||!JSON.parse(bank.data).questions.some(x=>x.status==='active'))raidError('請選擇有有效題目的題庫。');bankTitle=bank.title;}
   const hash=await sha(JSON.stringify({className,minutes,customHp,bankId}));let row=await env.DB.prepare('SELECT code,body_hash FROM raid_rooms WHERE host_id=? AND request_id=?').bind(user.id,body.requestId).first();

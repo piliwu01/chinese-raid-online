@@ -1,6 +1,7 @@
 export const AUTO_BANK_ID = 'math-auto';
 export const DEFAULT_BANK_ID = 'chinese-115-review-v1';
-export const preferredBank = banks => (banks || []).some(b => b.bankId === DEFAULT_BANK_ID) ? DEFAULT_BANK_ID : AUTO_BANK_ID;
+// 2026-11-23 取消自動數學練習：優先預設國文題庫，否則選第一份有題目的題庫。
+export const preferredBank = banks => (banks || []).some(b => b.bankId === DEFAULT_BANK_ID) ? DEFAULT_BANK_ID : ((banks || []).find(b => b.count > 0)?.bankId || '');
 export const STORAGE_KEY = 'quizspirit.question-banks.v1';
 const letters = ['A', 'B', 'C', 'D'];
 const text = value => typeof value === 'string' && value.trim().length > 0;

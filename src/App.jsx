@@ -27,7 +27,7 @@ import {canUseSpirit} from '../shared/ownership.js';
 import { canCapture, captureSucceeds } from './capture';
 import { loadSave, saveProgress, chooseStarter, evolve, partnerFor, familyFor, levelFor, recordAnswer } from './growth';
 import QuestionBankPanel from './QuestionBankPanel';
-import { AUTO_BANK_ID, DEFAULT_BANK_ID, STORAGE_KEY, validateBank, activeQuestions, drawQuestion, readStoredBanks, writeStoredBanks } from './question-bank';
+import { AUTO_BANK_ID, DEFAULT_BANK_ID, preferredBank, STORAGE_KEY, validateBank, activeQuestions, drawQuestion, readStoredBanks, writeStoredBanks } from './question-bank';
 const browserStorage = () => { try { return window.localStorage; } catch { return null; } };
 import { Volume2, VolumeX, Sparkles, RefreshCw, Trophy, Shield, Flame, Droplets, Zap, Leaf, Heart, Search, HelpCircle, ChevronRight, Award, Crosshair, CheckCircle2, XCircle, ArrowLeft, Star, Clock, AlertTriangle, Music2, Music, X, ListChecks, Gift, ShoppingBag, Map as MapIcon } from 'lucide-react';
 
@@ -291,9 +291,9 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
   const [musicReady, setMusicReady] = useState(false);
   const [difficulty, setDifficulty] = useState('medium');
   const questionBanks = cloudBanks;
-  const [selectedBankId, setSelectedBankId] = useState(AUTO_BANK_ID);
+  const [selectedBankId, setSelectedBankId] = useState(() => preferredBank(cloudBanks));
   const bankChosen = useRef(false);
-  useEffect(() => { if (!bankChosen.current && selectedBankId === AUTO_BANK_ID && questionBanks.some(b => b.bankId === DEFAULT_BANK_ID)) setSelectedBankId(DEFAULT_BANK_ID); }, [questionBanks, selectedBankId]);
+  useEffect(() => { const ok = questionBanks.some(b => b.bankId === selectedBankId && b.count > 0); if (!ok || (!bankChosen.current && selectedBankId !== DEFAULT_BANK_ID && questionBanks.some(b => b.bankId === DEFAULT_BANK_ID))) { const p = preferredBank(questionBanks); if (p !== selectedBankId) setSelectedBankId(p); } }, [questionBanks, selectedBankId]);
   const [bankNotice, setBankNotice] = useState('');
   const [questionFeedback, setQuestionFeedback] = useState(null);
   const questionDecks = useRef({});
@@ -726,7 +726,7 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
       </>}
       {view==='chapters' && <section className="page-chapters"><ChapterMap chapters={cloud.chapters||[]} schedule={cloud.schedule} current={chapter} busy={cloudBusy} onPick={setChapter}/></section>}
       {view==='battle' && <>
-        <div className="active-bank-label">目前題庫：{selectedBank?.title || '自動數學練習'}{selectedBank ? ' · 題庫題型與倒數以匯入資料為準' : ''}</div>
+        <div className="active-bank-label">目前題庫：{selectedBank?.title || '尚未選擇題庫'}{selectedBank ? ' · 題庫題型與倒數以匯入資料為準' : ''}</div>
         <div className="battle-heading"><div><span className="section-label">WILD ENCOUNTER</span><h1>{place}<span>{chapterById(battleMeta.chapter)?.name||'野生遭遇戰'} · 野生遭遇戰</span></h1></div><div className="battle-streak"><Trophy size={17}/> {winStreak} 連勝</div></div>
         <div className="battle-layout battle-full"><section className="battle-main"><div className={`arena ${damagePopup?'impact':''} ${hitFx?.crit?'arena-crit':''} ${hitFx?.effect==='super'?'arena-super':''} ${cutIn?'arena-break':''}`}>{(playerStatus.some(Boolean)||enemyStatus.some(Boolean))&&<div className="arena-status-strip"><StatusChips items={playerStatus} label="夥伴狀態" className="strip-player"/><StatusChips items={enemyStatus} label="對手狀態" className="strip-enemy"/></div>}<BreakCutIn fx={cutIn} onDone={()=>setCutIn(null)}/>
           <Forest/><SceneBg name={battleMeta.scene}/><AtmoLayer time={atmo.time} weather={atmo.weather}/><div className="arena-caption"><span className="live-dot"/> {place} · {atmo.timeLabel} · {atmo.weatherLabel} <Leaf size={14}/></div>{intro&&<EncounterIntro enemy={intro.enemy} battleId={intro.id} onDone={()=>setIntro(null)}/>}{combo>=2&&<div className={`combo-badge ${combo>=3?'is-hot':''}`} key={combo} role="status">🔥 <b>{combo}</b> 連擊{combo>=3&&<small>傷害 ×{(1+Math.min(combo,8)*0.1-0.2).toFixed(1)}</small>}</div>}
