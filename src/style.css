@@ -933,3 +933,10 @@ body.battle-focus .fighter-status .status-chip{font-size:calc(12px * var(--bf,1)
 @keyframes worldPop{0%{opacity:0;transform:translateY(10px) scale(.8)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0;transform:translateY(-24px)}}
 @media(max-width:760px){.world-hit-pop{top:auto;bottom:10px;right:8px;font-size:13px;padding:4px 10px}}
 @media(prefers-reduced-motion:reduce){.world-hit-pop{animation:worldPop 1.8s steps(1) forwards}}
+/* 2026-11-23 被動技能：名稱一行、說明第二行 */
+.choice-passive .cp-name,.partner-passive .cp-name{display:block;font-size:14px;font-weight:900;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.choice-passive .cp-name{color:#9a5b00}
+.choice-passive .cp-desc,.partner-passive .cp-desc{display:block}
+.choice-passive .cp-steps{display:block;margin-top:3px;color:#8a6a2c}
+.choice-passive{padding:7px 10px}
+@media(max-width:600px){.choice-passive .cp-tag{display:none}.choice-passive .cp-name{font-size:12.5px;letter-spacing:-.2px}.choice-passive{padding:6px 7px}}
