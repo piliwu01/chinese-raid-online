@@ -8,22 +8,25 @@ import {explain} from './ai.js';
 import {handleTrade,tradeLog} from './trade.js';
 import {learningReport} from './report.js';
 import {handleHero,pendingAwards,markClaimed} from './hero.js';
+import {worldView,worldContext,hitStatement,pendingWorld,markWorldClaimed} from './world.js';
 export {RaidRoom} from './raid-room.js';
 export {PvpRoom} from './pvp-room.js';
 
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...extra}});
 async function bodyOf(req){const reader=req.body?.getReader();if(!reader)return {};let size=0,chunks=[];for(;;){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>5*1024*1024){await reader.cancel();fail('內容超過 5 MB。',413);}chunks.push(value);}const bytes=new Uint8Array(size);let at=0;for(const c of chunks){bytes.set(c,at);at+=c.length;}try{return JSON.parse(new TextDecoder().decode(bytes));}catch{fail('資料格式不正確。');}}
 async function stateOf(db,id){const row=await db.prepare('SELECT * FROM progress WHERE user_id=?').bind(id).first();if(!row)fail('找不到養成進度。',500);return row;}
-async function mutate(db,user,route,body,bank){
+// opts.inject：伺服器注入的欄位（不列入重送比對）；opts.extra(event)：與進度同一批寫入的額外資料。
+async function mutate(db,user,route,body,bank,opts={}){
  const requestId=body.requestId;if(typeof requestId!=='string'||!/^[a-zA-Z0-9_-]{16,80}$/.test(requestId))fail('操作識別無效，請重新操作。');
  const fingerprint=await sha(route+JSON.stringify(body));
  for(let retry=0;retry<5;retry++){
   const previous=await db.prepare('SELECT route,result FROM operations WHERE user_id=? AND request_id=?').bind(user.id,requestId).first();
   if(previous){if(previous.route!==fingerprint)fail('操作識別重複，內容不一致。',409);return {state:publicState(JSON.parse((await stateOf(db,user.id)).data)),event:JSON.parse(previous.result),replayed:true};}
-  const row=await stateOf(db,user.id),state=JSON.parse(row.data);const event=applyAction(state,route,route==="/fortune/draw"?{...body,userKey:user.id}:body,Date.now(),bank);const guard=crypto.randomUUID();
+  const row=await stateOf(db,user.id),state=JSON.parse(row.data);const event=applyAction(state,route,route==="/fortune/draw"?{...body,userKey:user.id}:{...body,...(opts.inject||{})},Date.now(),bank);const guard=crypto.randomUUID();
   try{await db.batch([
    db.prepare('UPDATE progress SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(state),user.id,row.version),
    db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(guard),
+   ...(opts.extra?opts.extra(event):[]),
    db.prepare('INSERT INTO operations(user_id,request_id,route,result,created_at) VALUES(?,?,?,?,?)').bind(user.id,requestId,fingerprint,JSON.stringify(event),Date.now()),
    db.prepare('DELETE FROM state_guards WHERE id=?').bind(guard)
   ]);return {state:publicState(state),event};}catch(e){if(retry===4)throw Object.assign(Error('有另一台裝置正在更新，請重新載入後再試。'),{status:409});}
@@ -68,6 +71,8 @@ async function route(req,env){
  if(user.must_change)fail('請先更改初始密碼。',403);
  if(path==='/ai/explain'&&req.method==='POST')return json(await explain(env,user,body));
  if((path==='/hero/board'||path==='/hero/pending')&&req.method==='POST')return json(await handleHero(env,user,path));
+ if(path==='/world/view'&&req.method==='POST')return json(await worldView(env,user,body));
+ if(path==='/world/pending'&&req.method==='POST')return json({awards:await pendingWorld(db,user)});
  if(path.startsWith('/trade/')&&req.method==='POST'){if(!['/trade/board','/trade/offer','/trade/accept','/trade/decline','/trade/cancel'].includes(path))fail('找不到這個功能。',404);return json(await handleTrade(env,user,path,body));}
  if(path.startsWith('/pvp/'))return handlePvp(req,env,user,path,body);
  if(path.startsWith('/raid/'))return handleRaid(req,env,user,path,body);
@@ -110,10 +115,12 @@ async function route(req,env){
   fail('找不到此管理功能。',404);
  }
  if(req.method!=='POST')fail('找不到此功能。',404);
- const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert','/collection/claim'];if(!allowed.includes(path))fail('找不到此操作。',404);
- if(env.RAIDS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const member=await currentMembership(env,user);if(member&&['waiting','active','paused'].includes(member.status))fail('你正在共同討伐房間中，請先回到討伐。',409);}
- if(env.PVPS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const activity=await activeActivity(env,user);if(activity?.mode==='pvp')fail('你正在 PVP 房間中，請先回到對決。',409);}
+ const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert','/collection/claim','/world/question','/world/answer','/world/claim'];if(!allowed.includes(path))fail('找不到此操作。',404);
+ if(env.RAIDS&&['/bag/use','/battle/start','/question','/answer','/world/question','/world/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const member=await currentMembership(env,user);if(member&&['waiting','active','paused'].includes(member.status))fail('你正在共同討伐房間中，請先回到討伐。',409);}
+ if(env.PVPS&&['/bag/use','/battle/start','/question','/answer','/world/question','/world/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const activity=await activeActivity(env,user);if(activity?.mode==='pvp')fail('你正在 PVP 房間中，請先回到對決。',409);}
  let bank=null;if(body.bankId&&body.bankId!=='math-auto'){const row=await db.prepare('SELECT data FROM banks WHERE id=?').bind(String(body.bankId)).first();if(!row)fail('找不到題庫，請重新選擇。',404);bank=JSON.parse(row.data);}
+ if(path==='/world/question'||path==='/world/answer'){const ctx=await worldContext(db,user);return json(await mutate(db,user,path,body,bank,{inject:{week:ctx.week,weak:ctx.boss.weak,hpLeft:ctx.hpLeft},extra:path==='/world/answer'?event=>[hitStatement(db,user,ctx.week,event)]:null}));}
+ if(path==='/world/claim'){const awards=await pendingWorld(db,user);if(!awards.length)fail('目前沒有可領取的山海魔王獎勵。');const result=await mutate(db,user,path,{requestId:body.requestId},bank,{inject:{awards}});await markWorldClaimed(db,user,awards);return json(result);}
  if(path==='/hero/claim'){const awards=await pendingAwards(db,user);if(!awards.length)fail('目前沒有可領取的英雄榜獎勵。');const result=await mutate(db,user,path,{requestId:body.requestId,awards},bank);await markClaimed(db,user,awards);return json(result);}
  return json(await mutate(db,user,path,body,bank));
 }

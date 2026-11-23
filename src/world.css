@@ -1,0 +1,84 @@
+/* 2026-11-23 本週山海魔王 */
+.world-page{max-width:1280px;margin:auto;padding:34px 32px 60px;color:#edf1fa}
+.world-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.world-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:#ffb3d1}
+.world-head h1{display:flex;align-items:center;gap:10px;margin:4px 0;font-size:36px}
+.world-head p{margin:0;color:#c3cde0;font-size:15px}
+.world-loading{color:#c3cde0;font-size:17px}
+.wb-class{display:inline-flex;align-items:center;gap:10px;margin-bottom:14px;font-weight:800}
+.wb-class select,.wb-bank select{padding:8px 12px;border-radius:10px;background:#1c2738;color:#edf1fa;border:1px solid #4a5d7a;font-size:15px}
+.world-last{margin:0 0 14px;padding:10px 16px;border-radius:12px;background:#1d2636;border:1px solid #3d4c66;color:#d2dbea;font-size:15px}
+.world-last.is-won{border-color:#f2cf77;color:#ffe49a}
+.world-boss{display:flex;gap:26px;align-items:center;padding:22px;border-radius:22px;background:linear-gradient(120deg,#3a1d3c,#1d2538 60%);border:1px solid #c26b8f66;box-shadow:0 14px 40px #0005}
+.world-boss.is-defeated{filter:saturate(.75)}
+.wb-portrait{position:relative;flex:none;width:220px;height:220px;border-radius:50%;overflow:hidden;border:4px solid #ffb3d1aa;box-shadow:0 0 30px #e0558a55;background:#2a1f33}
+.wb-portrait img{width:100%;height:100%;object-fit:cover}
+.world-boss.is-defeated .wb-portrait img{filter:grayscale(.8) brightness(.8)}
+.wb-hit{position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font:900 40px ui-monospace,monospace;color:#fff;text-shadow:0 0 12px #ff4b6e,3px 3px 0 #5b1030;animation:wbHit 1.1s ease-out forwards;white-space:nowrap}
+.wb-hit.is-weak{color:#ffe49a;text-shadow:0 0 12px #ffb000,3px 3px 0 #5b3a00}
+@keyframes wbHit{0%{opacity:0;transform:translate(-50%,-30%) scale(.6)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}100%{opacity:0;transform:translate(-50%,-110%) scale(1)}}
+.wb-info{flex:1;min-width:0}
+.wb-title{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.wb-title h2{margin:0;font-size:26px}
+.wb-clock{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#ffd76a22;border:1px solid #ffd76a88;color:#ffe49a;font-weight:800;white-space:nowrap}
+.wb-line{margin:8px 0 14px;color:#e3c9da;font-size:16px}
+.wb-hp{display:flex;justify-content:space-between;align-items:baseline;color:#d6deeb}
+.wb-hp b{font:800 30px ui-monospace,monospace;color:#f2adc9}.wb-hp small{font-size:16px;color:#b8a2b8}
+.wb-bar{height:18px;border-radius:9px;background:#ffffff1a;overflow:hidden;margin-top:6px}
+.wb-bar i{display:block;height:100%;background:linear-gradient(90deg,#b46cff,#ff6f9f);transition:width .6s}
+.wb-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.wb-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:#ffffff12;border:1px solid #ffffff2a;font-size:14px;font-weight:700;color:#dbe3f0}
+.wb-chip.is-weak{background:#b46cff26;border-color:#c3a6ff;color:#e6d9ff}
+.world-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(280px,1fr);gap:20px;margin-top:20px}
+.world-grid.is-teacher{grid-template-columns:minmax(0,1fr)}
+.world-play,.wb-card{background:#1c2b3d;border:1px solid #647f9a55;border-radius:18px;padding:22px}
+.world-side{display:flex;flex-direction:column;gap:16px}
+.wb-closed{text-align:center;padding:30px 10px;color:#d2dbea}.wb-closed h3{margin:10px 0 6px;font-size:22px}
+.wb-start{display:flex;flex-direction:column;gap:14px}
+.wb-start>small{color:#aebbd0;font-size:13px}
+.wb-bank{display:flex;align-items:center;gap:10px;font-weight:800}
+.wb-diffs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.wb-diffs button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 6px;border-radius:14px;border:2px solid #4a5d7a;background:#243246;color:#e6ecf5;font-size:18px;font-weight:900;cursor:pointer}
+.wb-diffs button small{font-size:13px;font-weight:700;color:#aebbd0}
+.wb-diffs button.active{border-color:#f2cf77;background:#3a3016;color:#ffe49a}
+.wb-go{justify-content:center;gap:10px;font-size:22px;min-height:64px}
+.wb-feedback{padding:14px 16px;border-radius:14px;background:#2a1f2c;border:1px solid #ff8f8f66}
+.wb-feedback.is-correct{background:#1d3a30;border-color:#6fdcb0aa}
+.wb-feedback strong{display:block;font-size:19px;margin-bottom:6px}
+.wb-feedback p{margin:4px 0;font-size:16px;color:#dbe3f0}
+.wb-expl{color:#c3cde0!important;font-size:15px!important;line-height:1.7}
+.wb-qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;color:#c3cde0}
+.wb-qhead em{font-style:normal;margin-left:8px;padding:2px 9px;border-radius:999px;background:#ffffff14;color:#e6ecf5}
+.wb-qhead em.is-weak{background:#b46cff33;color:#e6d9ff}
+.wb-qhead b{display:inline-flex;align-items:center;gap:4px;color:#ffe49a}
+.wb-question h3{font-size:26px;line-height:1.6;margin:14px 0 16px}
+.wb-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wb-options button{display:flex;align-items:center;gap:12px;padding:16px 14px;border-radius:12px;background:#263e54;border:1px solid #67849d80;color:#f0f4fa;text-align:left;min-height:64px;cursor:pointer}
+.wb-options button span{font:11px monospace;color:#a0bdd6}
+.wb-options button b{flex:1;font-size:24px;line-height:1.5;overflow-wrap:anywhere}
+.wb-options button:hover:not(:disabled){border-color:#f2cf77;background:#34475d}
+.wb-card h3{margin:0 0 12px;font-size:19px}
+.wb-me{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.wb-me span{display:flex;flex-direction:column;align-items:center;padding:10px 4px;border-radius:12px;background:#ffffff0d;color:#c3cde0;font-size:13px}
+.wb-me b{font:800 24px ui-monospace,monospace;color:#ffb38a;margin-top:2px}
+.wb-card>p{margin:10px 0 0;font-size:15px;color:#ffd6a0}.wb-card>p.is-ok{color:#8fe3c8}
+.wb-rank{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.wb-rank li{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#ffffff0a;font-size:15px}
+.wb-rank li.is-me{background:#f2cf7722;border:1px solid #f2cf7766}
+.wb-rank li b{width:26px;text-align:center;color:#b8c4d6}
+.wb-rank li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-rank li em{font-style:normal;font:800 16px ui-monospace,monospace;color:#f2adc9}
+.wb-rank li small{color:#aebbd0}
+.wb-empty{color:#aebbd0;font-size:15px}
+.wb-rules p{margin:6px 0;font-size:14px;line-height:1.6;color:#d2dbea}
+@media(max-width:820px){.world-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){
+ .world-page{padding:20px 14px 40px}.world-head h1{font-size:28px}.world-head{flex-wrap:wrap}
+ .world-boss{flex-direction:column;gap:14px;padding:16px;text-align:center}
+ .wb-portrait{width:150px;height:150px}.wb-title{justify-content:center}.wb-title h2{font-size:20px}
+ .wb-hp b{font-size:24px}.wb-chips{justify-content:center}
+ .world-play,.wb-card{padding:16px}
+ .wb-options{grid-template-columns:1fr}.wb-options button b{font-size:21px}.wb-question h3{font-size:21px}
+ .wb-diffs button{font-size:16px;padding:10px 4px}.wb-go{font-size:20px}
+}
+@media(prefers-reduced-motion:reduce){.wb-hit{animation:none;opacity:0}}

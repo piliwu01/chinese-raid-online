@@ -10,9 +10,10 @@
 - 共用規則（前後端都用、純函式、有單元測試）：`shared/`。
   - `game.js`：伺服器權威的 `applyAction`，所有學生進度變更都走這裡；`freshState()` 是新帳號的進度。
   - `raid-rules.js`＋`raid-skills.js`：討伐規則與魔王干擾技能（設定在 `BOSS_SKILL`）。
+  - `world-boss.js`＋`server/world.js`：本週山海魔王（每班每週一隻，週日 22:00 結算，資料表 `migrations/0009_world_boss.sql`）。
   - `passives.js`（初始夥伴被動）、`qpick.js`（抽題不重複）、`hero.js`（英雄榜）、`lucky.js`（山海籤）、`dupes.js`（重複卡轉化）、`trade.js`（卡牌交易）。
 - 一次性：`operations` 表（requestId 防重送）；多筆原子更新：`state_guards`。
-- 角色圖：存在 D1 `art_images`，由 `/assets/<id>.png` 提供，Worker 快取 1 小時。音樂 `public/music`，遊戲說明圖 `public/guide/1~6.webp`。
+- 角色圖：存在 D1 `art_images`，由 `/assets/<id>.png` 提供，Worker 快取 1 小時。音樂 `public/music`，遊戲說明圖 `public/guide/1~8.webp`、山海魔王圖 `public/world/<id>.webp`。
 - 資料表定義：`migrations/`。**deploy.bat 不會自動套用 migration**，新增資料表要另外對正式 D1 執行 `CREATE TABLE IF NOT EXISTS ...`，並把 SQL 存進 `migrations/`。
 
 ## 開發與測試
@@ -35,7 +36,7 @@
 - 不要跟使用者要密碼。需要測試時，用 Cloudflare 在 D1 建立臨時帳號，帳號一律以 `zztest-` 開頭：
   - `users` 欄位：`id, username, display_name, class_name, role, password(雜湊), must_change, created_at(毫秒)`；學生 `role='student'`，要測開討伐房／投影畫面時另建 `role='teacher'` 的 `zztest-t1`。
   - 另插一筆 `progress(user_id, version, data)`，data 用 `freshState()` 並填好 `growth.starter`、`captured`、`selected`。
-- 測完一定清理，依序刪除 `user_id IN (select id from users where username like 'zztest-%')` 的 hero_awards、trades（from_id/to_id）、sessions、operations、raid_members、pvp_members、activity_locks、progress、ai_usage，再刪 host 為測試帳號的 raid_rooms、pvp_rooms，最後刪 users，並回報剩餘帳號數。
+- 測完一定清理，依序刪除 `user_id IN (select id from users where username like 'zztest-%')` 的 hero_awards、trades（from_id/to_id）、sessions、operations、raid_members、pvp_members、activity_locks、progress、ai_usage、world_hits、world_awards，再刪 host 為測試帳號的 raid_rooms、pvp_rooms 與測試班級（如 `zztest`）的 world_bosses、world_settled，最後刪 users，並回報剩餘帳號數。
 - 不在真實學生帳號上做會改變資料的測試。
 
 ## 設計規則（使用者已確認，不要擅自改回）

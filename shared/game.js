@@ -1,6 +1,7 @@
 export const ENEMY_HP=500;
 export const ENRAGE={at:0.5,mult:1.5};
 import {claimHero} from './hero.js';
+import {claimWorld,damageFor} from './world-boss.js';
 import {pickBankQuestion} from './qpick.js';
 import {convertDupe} from './dupes.js';
 import {passiveFor,PASSIVE_RATE,PASSIVE_NUM} from './passives.js';
@@ -35,7 +36,7 @@ export const itemName = (starter,at) => ({2010:['雷之徽章','雷霆之證'],2
 export const requiredDays = at => at===50?7:14;
 export function fail(message,status=400){throw Object.assign(new Error(message),{status});}
 export const publicQuestion = q => q ? {id:q.id,question:q.question,options:q.options,optionTexts:q.optionTexts,timeLimit:q.timeLimit,expires:q.expires,difficulty:q.difficulty,category:q.category} : null;
-export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:earnedTitles(s.captured),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
+export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,worldQ,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:[...earnedTitles(s.captured),...(s.extraTitles||[])],worldQuestion:worldQ?publicQuestion(worldQ):null,...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;
@@ -136,12 +137,27 @@ export function applyAction(s,route,b,now,bank=null){
   event=pullLantern(s,now);
  }else if(route==='/dupe/convert'){
   const r=convertDupe(s,b.id,b.to);event.convert=r;event.message=`${r.zhName} 副本卡已轉化為 ${r.label} ×${r.amount}${r.rare?'（稀有加倍）':''}。`;
+ }else if(route==='/world/question'){
+  // 山海魔王：week、weak 由伺服器注入（不信任前端）。
+  needPartner(s);const diff=['easy','medium','hard'].includes(b.difficulty)?b.difficulty:'medium';
+  if(s.worldQ&&s.worldQ.expires>=now&&s.worldQ.week===b.week){event.question=publicQuestion(s.worldQ);return event;}
+  s.worldQ={...questionFor(bank,diff,now,s),difficulty:diff,week:String(b.week||''),weak:b.weak||null};event.question=publicQuestion(s.worldQ);
+ }else if(route==='/world/answer'){
+  const q=s.worldQ;if(!q||q.id!==b.questionId)fail('這題已結束，請重新出題。',409);if(q.week!==b.week)fail('這週的山海魔王已結算，請重新整理。',409);
+  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;
+  if(result.reward.complete){s.food++;if(!s.roundDays.includes(today))s.roundDays.push(today);if(addChest(s,'round'))event.chest='完成一輪 10 題';}
+  if(event.correct){if(noteCorrect(s,today))event.jade=true;bumpQuest(s,'correct10',today);}else addInk(s,q.bankId,q.questionId,q.question,today);
+  const left=Math.max(0,Number(b.hpLeft)||0),raw=event.correct?damageFor(q.difficulty,q.category,q.weak):0;
+  event.world={damage:Math.min(raw,left),raw,weak:!!(event.correct&&q.weak&&q.category===q.weak),week:q.week};s.worldQ=null;
+ }else if(route==='/world/claim'){
+  const got=claimWorld(s,b.awards);if(!got.length)fail('目前沒有可領取的山海魔王獎勵。');event.awards=got;
+  event.message=got.map(r=>r.won?`山海魔王打倒了！寶箱 ${r.chest}、玉符 ${r.jade}、食物 ${r.food}${r.title?`，獲得稱號「${r.title}」`:''}`:`山海魔王參加獎：食物 ${r.food}`).join('；');
  }else if(route==='/hero/claim'){
   const got=claimHero(s,b.awards);if(!got.length)fail('目前沒有可領取的英雄榜獎勵。');event.awards=got;event.jade=got.reduce((a,b)=>a+b.jade,0);event.message=`英雄榜獎勵入帳：玉符 ${event.jade} 枚！`;
  }else if(route==='/collection/claim'){
   needPartner(s);event={...event,...claimCollection(s,b.id)};
  }else if(route==='/title'){
-  const value=String(b.title||'');if(value&&!earnedTitles(s.captured).includes(value))fail('還沒有取得這個稱號。',403);s.title=value;event.message=value?`已配戴稱號「${value}」。`:'已取消配戴稱號。';
+  const value=String(b.title||'');if(value&&![...earnedTitles(s.captured),...(s.extraTitles||[])].includes(value))fail('還沒有取得這個稱號。',403);s.title=value;event.message=value?`已配戴稱號「${value}」。`:'已取消配戴稱號。';
  }else if(route==='/bank/change'){
   s.challenge=null;s.pending=null;
  }else fail('找不到此操作。',404);
