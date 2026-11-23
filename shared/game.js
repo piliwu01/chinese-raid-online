@@ -2,6 +2,7 @@ export const ENEMY_HP=500;
 export const ENRAGE={at:0.5,mult:1.5};
 import {claimHero} from './hero.js';
 import {claimWorld,damageFor} from './world-boss.js';
+import {rollEncounter,resolveEncounterAnswer,encounterDone,publicEncounter} from './encounter.js';
 import {pickBankQuestion} from './qpick.js';
 import {convertDupe} from './dupes.js';
 import {passiveFor,PASSIVE_RATE,PASSIVE_NUM} from './passives.js';
@@ -36,7 +37,7 @@ export const itemName = (starter,at) => ({2010:['雷之徽章','雷霆之證'],2
 export const requiredDays = at => at===50?7:14;
 export function fail(message,status=400){throw Object.assign(new Error(message),{status});}
 export const publicQuestion = q => q ? {id:q.id,question:q.question,options:q.options,optionTexts:q.optionTexts,timeLimit:q.timeLimit,expires:q.expires,difficulty:q.difficulty,category:q.category} : null;
-export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,worldQ,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:[...earnedTitles(s.captured),...(s.extraTitles||[])],worldQuestion:worldQ?publicQuestion(worldQ):null,...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
+export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,worldQ,encounter,encounterDay,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:[...earnedTitles(s.captured),...(s.extraTitles||[])],worldQuestion:worldQ?publicQuestion(worldQ):null,encounter:publicEncounter(encounter,publicQuestion),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;
@@ -67,6 +68,7 @@ export function applyAction(s,route,b,now,bank=null){
   const picked=spiritRef(pickEnemy(chapter,now,selected.id)),enemy=Math.random()<SHINY_RATE?{...picked,shiny:true}:{...picked};const level=23+Math.floor(Math.random()*5);
   const playerHp=b.heal||!s.battle||s.battle.status==='lost'?185:s.battle.playerHp;
   const bgs=chapterById(chapter).bgs;s.battle={id:crypto.randomUUID(),enemy,level,maxHp:ENEMY_HP,hp:ENEMY_HP,playerMaxHp:185,playerHp,status:'ready',chapter,scene:bgs[Math.floor(Math.random()*bgs.length)]};startBreak(s.battle,bank);s.pending=null;
+  const enc=rollEncounter(s,today);if(enc)event.encounter=enc.kind;
  }else if(route==='/question'){
   needPartner(s);if(!ownedSpirit(s,s.selected?.id))fail('這個角色尚未收服，請重新選擇自己的夥伴。',403);if(!s.battle||s.battle.status!=='ready')fail('請重新開始一場對戰。');
   const move=String(b.move);if(!['quick','special','critical','catch'].includes(move))fail('招式無效。');
@@ -152,6 +154,18 @@ export function applyAction(s,route,b,now,bank=null){
  }else if(route==='/world/claim'){
   const got=claimWorld(s,b.awards);if(!got.length)fail('目前沒有可領取的山海魔王獎勵。');event.awards=got;
   event.message=got.map(r=>r.won?`山海魔王打倒了！寶箱 ${r.chest}、玉符 ${r.jade}、食物 ${r.food}${r.title?`，獲得稱號「${r.title}」`:''}`:`山海魔王參加獎：食物 ${r.food}`).join('；');
+ }else if(route==='/encounter/question'){
+  const e=s.encounter;if(!e||e.done||!['shell','page'].includes(e.kind))fail('目前沒有需要答題的奇遇。',409);
+  if(!(e.q&&e.q.expires>=now))e.q={...questionFor(bank,'medium',now,s),difficulty:'medium'};event.question=publicQuestion(e.q);
+ }else if(route==='/encounter/answer'){
+  const e=s.encounter,q=e?.q;if(!e||e.done||!q||q.id!==b.questionId)fail('這題已結束，請重新開始奇遇。',409);
+  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;
+  if(event.correct){if(noteCorrect(s,today))event.jade=true;bumpQuest(s,'correct10',today);}else addInk(s,q.bankId,q.questionId,q.question,today);
+  event.encounter=resolveEncounterAnswer(s,event.correct,result.reward?.gained||0);
+ }else if(route==='/encounter/skip'){
+  const e=s.encounter;if(!e||e.done)fail('目前沒有奇遇。',409);event.encounter=encounterDone(s,{kind:e.kind,skipped:true,text:'略過奇遇，繼續冒險。'});
+ }else if(route==='/encounter/close'){
+  if(s.encounter&&!s.encounter.done)fail('奇遇還沒結束。',409);s.encounter=null;event.message='繼續冒險！';
  }else if(route==='/hero/claim'){
   const got=claimHero(s,b.awards);if(!got.length)fail('目前沒有可領取的英雄榜獎勵。');event.awards=got;event.jade=got.reduce((a,b)=>a+b.jade,0);event.message=`英雄榜獎勵入帳：玉符 ${event.jade} 枚！`;
  }else if(route==='/collection/claim'){
