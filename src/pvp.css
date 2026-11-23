@@ -27,3 +27,7 @@
 /* 選項字體與題目一樣大（2026-11-21）：PVP */
 .pvp-options>button>strong{font-size:29px;line-height:1.6}
 @media(max-width:600px){.pvp-options>button>strong{font-size:24px}}
+/* 2026-11-23 PVP 等級門檻 */
+.pvp-level-lock{display:grid;gap:6px;padding:14px 16px;border-radius:14px;border:2px solid #f2cf77;background:#3a2f12cc;color:#ffe9a8}
+.pvp-level-lock b{font-size:19px}
+.pvp-level-lock span{font-size:16px;color:#f1e6c6}

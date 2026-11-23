@@ -1,8 +1,10 @@
-import {sha} from './auth.js';import {ownedSpirit} from '../shared/ownership.js';import {partnerFor} from '../src/growth.js';import {pvpLive,pvpError} from '../shared/pvp-rules.js';import {activeActivity,claimActivity,releaseActivity} from './activity.js';
+import {sha} from './auth.js';import {ownedSpirit} from '../shared/ownership.js';import {partnerFor,levelFor} from '../src/growth.js';import {PVP,pvpLive,pvpError} from '../shared/pvp-rules.js';import {activeActivity,claimActivity,releaseActivity} from './activity.js';
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const actor=user=>({id:user.id,name:user.display_name,className:user.class_name,role:user.role,tokenHash:user.token_hash,sessionExpires:user.session_expires});
 export const pvpStub=(env,code)=>env.PVPS.get(env.PVPS.idFromName(code));
 async function forward(env,code,path,user,body,upgrade=false){const headers={'X-Battle-Actor':encodeURIComponent(JSON.stringify(actor(user)))};if(upgrade)headers.Upgrade='websocket';return pvpStub(env,code).fetch(new Request('https://pvp.internal'+path,{method:body===undefined?'GET':'POST',headers,body:body===undefined?undefined:JSON.stringify(body)}));}
+// PVP 需要夥伴等級 10 以上（2026-11-23）。
+const needLevel=state=>{const lv=levelFor(state.growth?.xp||0);if(lv<PVP.minLevel)pvpError(`PVP 對決需要夥伴等級 ${PVP.minLevel} 以上，你目前是 Lv.${lv}，再多答幾題就能挑戰！`,403);};
 const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{16,80}$/.test(id);
 export async function handlePvp(req,env,user,path,body){
  if(!env.PVPS)pvpError('PVP 服務尚未設定。',503);if(user.role!=='student')pvpError('PVP 由同班學生建立與加入。',403);
@@ -14,7 +16,7 @@ export async function handlePvp(req,env,user,path,body){
   const bankId=String(body.bankId||'math-auto'),playerId=body.playerId===undefined?undefined:Number(body.playerId),fingerprint=await sha(JSON.stringify({bankId,playerId}));
   const previous=await env.DB.prepare('SELECT code,body_hash,config FROM pvp_rooms WHERE host_id=? AND request_id=?').bind(user.id,body.requestId).first();if(previous){if(previous.body_hash!==fingerprint)pvpError('操作識別內容不一致。',409);return forward(env,previous.code,'/init',user,JSON.parse(previous.config));}
   if(await activeActivity(env,user))pvpError('請先完成或離開原本的戰鬥房間。',409);
-  const row=await env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data),fixed=partnerFor(state.growth);if(!fixed)pvpError('請先選定養成夥伴。');const partner=playerId===undefined?fixed:ownedSpirit(state,playerId);if(!partner)pvpError('只能選擇自己的固定夥伴或已收服角色。',403);
+  const row=await env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data),fixed=partnerFor(state.growth);if(!fixed)pvpError('請先選定養成夥伴。');needLevel(state);const partner=playerId===undefined?fixed:ownedSpirit(state,playerId);if(!partner)pvpError('只能選擇自己的固定夥伴或已收服角色。',403);
   let bankTitle='自動數學練習';if(bankId!=='math-auto'){const bank=await env.DB.prepare('SELECT title,data FROM banks WHERE id=?').bind(bankId).first();if(!bank||!JSON.parse(bank.data).questions.some(q=>q.status==='active'))pvpError('請選有有效題目的題庫。');bankTitle=bank.title;}
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',code=Array.from(crypto.getRandomValues(new Uint8Array(6)),n=>chars[n%chars.length]).join(''),config={code,hostId:user.id,className:user.class_name,bankId,bankTitle,creator:{id:user.id,name:user.display_name,partner,nickname:partner.id===fixed.id?state.nickname:''}};
   try{await env.DB.batch([
@@ -32,7 +34,7 @@ export async function handlePvp(req,env,user,path,body){
  if(action==='join'){
   if(user.class_name!==room.class_name)pvpError('只能加入自己班級的 PVP 房間。',403);
   const held=await activeActivity(env,user);if(held&&(held.mode!=='pvp'||held.room_code!==code))pvpError('你已在另一場戰鬥中，請先回到原房間。',409);
-  const row=await env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data);if(!partnerFor(state.growth))pvpError('請先選定養成夥伴。');if(body.playerId!==undefined&&!ownedSpirit(state,body.playerId))pvpError('這個角色尚未收服。',403);
+  const row=await env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data);if(!partnerFor(state.growth))pvpError('請先選定養成夥伴。');needLevel(state);if(body.playerId!==undefined&&!ownedSpirit(state,body.playerId))pvpError('這個角色尚未收服。',403);
   const statusResponse=await forward(env,code,'/status',user);if(!statusResponse.ok)pvpError('開房者尚未準備好，請稍後再試。',409);const status=(await statusResponse.json()).status,current=await env.DB.prepare('SELECT room_code FROM pvp_members WHERE user_id=?').bind(user.id).first();if(!pvpLive(status)&&current?.room_code!==code)pvpError('這場對決已結束。',409);
   if(pvpLive(status))added=await claimActivity(env,user,'pvp',code);
   await env.DB.prepare('INSERT INTO pvp_members(user_id,room_code) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET room_code=excluded.room_code').bind(user.id,code).run();

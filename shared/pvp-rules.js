@@ -1,5 +1,5 @@
 import {hitDamage} from './raid-rules.js';
-export const PVP={hp:185,hit:10,duration:300000,waitingDuration:600000,potion:30};
+export const PVP={minLevel:10,hp:185,hit:10,duration:300000,waitingDuration:600000,potion:30};
 export const pvpLive=status=>['waiting','active'].includes(status);
 export function pvpError(message,status=400){throw Object.assign(Error(message),{status});}
 export function pvpEvent(s,type,text,now,extra={}){s.sequence++;s.events.unshift({sequence:s.sequence,type,text,at:now,...extra});s.events=s.events.slice(0,14);}
