@@ -92,3 +92,36 @@ export async function analyze(env,summary,meta){
  return chat(env,[{role:'system',content:STYLE+'你要幫國中國文老師解讀一場全班答題遊戲的結果，給具體、可在下一節課執行的建議。只根據提供的數據與題目，不要編造數據。'},
   {role:'user',content:`班級：${meta.className}，題庫：${meta.bankTitle}，參與 ${meta.members} 人，共作答 ${summary.answered} 次，答對 ${summary.correct} 次。\n\n各題型錯誤率：\n${lines}\n\n錯最多的題目：\n${hard||'（沒有錯題）'}\n\n請寫給老師看，分三段，每段開頭用【】標出：【整體表現】一到兩句。【主要弱點】指出最需要加強的一到兩個題型或觀念，引用上面的題目當例子。【下一節課建議】兩到三個具體的教學活動或提問方式。全部 300 字以內。`}],700,.4);
 }
+
+// 2026-11-23 學生端「AI 學習健檢」：依自己的題型答對率與錯題，請 AI 找出強項、最需加強的題型與練習建議。
+// 至少答 30 題才開放；每人每天產生 1 次（同一天再看就用快取）；不送姓名、不送答案。
+export const STUDY_CHECK={minAnswered:30};
+export function studyPrompt(summary,wrongs){
+ const pct=x=>`${Math.round(x*100)}%`;
+ const lines=summary.cats.filter(c=>c.total>0).map(c=>`${c.category}：答對 ${c.right} 題、答錯 ${c.wrong} 題（答對率 ${pct(c.rate)}）`).join('\n');
+ const wrong=wrongs.map((w,i)=>`${i+1}. （${w.category||'未分類'}）${w.stem}`).join('\n');
+ return [{role:'system',content:STYLE+'你是國中生的國文學習教練，說話親切、具體、鼓勵，但要誠實指出問題。只根據提供的數據與錯題，不要編造數字，不要給出任何題目的答案。'},
+  {role:'user',content:`這位國中生最近在國文複習遊戲的表現：總共作答 ${summary.answered} 題，答對率 ${pct(summary.accuracy||0)}，近 7 天有 ${summary.activeDays7} 天練習。\n\n各題型表現：\n${lines}\n\n最近答錯、還沒弄懂的題目：\n${wrong||'（沒有）'}\n\n請只輸出一段 JSON，不要有其他文字，格式：{"strength":"一到兩句，說他的強項","weak":[{"category":"題型名稱（必須是上面出現過的題型）","reason":"從錯題看出的共通問題，一到兩句"}],"plan":["本週具體練習建議 1","建議 2","建議 3"]}。weak 最多 2 項，挑答對率最低、題數夠多的題型；plan 每句不超過 40 字，要能直接照做（例如在冒險選哪種題型的招式卡、先淨化哪些墨漬怪）。`}];
+}
+export function parseStudy(text,cats){
+ const m=String(text||'').match(/\{[\s\S]*\}/);if(!m)return null;
+ try{const j=JSON.parse(m[0]);const names=new Set(cats.map(c=>c.category));
+  const weak=(Array.isArray(j.weak)?j.weak:[]).filter(w=>w&&names.has(String(w.category))).slice(0,2).map(w=>({category:String(w.category),reason:cleanText(String(w.reason||''),120)}));
+  const plan=(Array.isArray(j.plan)?j.plan:[]).map(p=>cleanText(String(p),60)).filter(Boolean).slice(0,3);
+  const strength=cleanText(String(j.strength||''),120);
+  return strength||weak.length||plan.length?{strength,weak,plan}:null;
+ }catch{return null;}
+}
+export async function studyCheck(env,user,{studySummary,categorize},now=Date.now()){
+ if(user.role!=='student')throw aiError('學習健檢是給學生用的。',403);
+ const db=env.DB,row=await db.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first(),state=JSON.parse(row.data),summary=studySummary(state,now);
+ if(summary.answered<STUDY_CHECK.minAnswered)throw aiError(`再答 ${STUDY_CHECK.minAnswered-summary.answered} 題，就能請 AI 小老師幫你做學習健檢！`,409);
+ const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date(now)),key=`study:${user.id}:${day}`;
+ const cached=await cacheGet(db,key);if(cached)return {...JSON.parse(cached),cached:true,day};
+ const nest=(state.inkNest||[]).slice(-10);const banks={};
+ const wrongs=[];for(const m of nest){if(!banks[m.bankId]){const b=await db.prepare('SELECT data FROM banks WHERE id=?').bind(m.bankId).first();banks[m.bankId]=b?JSON.parse(b.data):{questions:[]};}
+  const q=banks[m.bankId].questions.find(x=>x.id===m.questionId);wrongs.push({stem:String(m.stem||'').slice(0,60),category:q?categorize(q):''});}
+ const result=parseStudy(await chat(env,studyPrompt(summary,wrongs),600,.5),summary.cats);
+ if(!result)throw aiError('AI 小老師這次沒有整理好，請稍後再試一次。',502);
+ await cachePut(db,key,JSON.stringify(result));return {...result,cached:false,day};
+}

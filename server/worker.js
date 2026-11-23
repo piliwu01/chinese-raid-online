@@ -4,7 +4,9 @@ import {validateBank} from '../src/question-bank.js';
 import {handleRaid,currentMembership} from './raid-api.js';
 import {handlePvp} from './pvp-api.js';
 import {activeActivity} from './activity.js';
-import {explain} from './ai.js';
+import {explain,studyCheck} from './ai.js';
+import {studySummary} from '../shared/learning.js';
+import {categorize} from '../shared/play.js';
 import {handleTrade,tradeLog} from './trade.js';
 import {learningReport} from './report.js';
 import {handleHero,pendingAwards,markClaimed} from './hero.js';
@@ -71,6 +73,8 @@ async function route(req,env){
  }
  if(user.must_change)fail('請先更改初始密碼。',403);
  if(path==='/ai/explain'&&req.method==='POST')return json(await explain(env,user,body));
+ if(path==='/ai/study'&&req.method==='POST')return json(await studyCheck(env,user,{studySummary,categorize}));
+ if(path==='/study/summary'&&req.method==='POST'){const row=await db.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first();return json({summary:studySummary(JSON.parse(row.data))});}
  if((path==='/hero/board'||path==='/hero/pending')&&req.method==='POST')return json(await handleHero(env,user,path));
  if(path==='/world/view'&&req.method==='POST')return json(await worldView(env,user,body));
  if(path==='/world/pending'&&req.method==='POST')return json({awards:await pendingWorld(db,user)});
@@ -116,7 +120,7 @@ async function route(req,env){
   fail('找不到此管理功能。',404);
  }
  if(req.method!=='POST')fail('找不到此功能。',404);
- const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert','/collection/claim','/world/claim','/encounter/question','/encounter/answer','/encounter/skip','/encounter/close'];if(!allowed.includes(path))fail('找不到此操作。',404);
+ const allowed=['/fortune/draw','/chest/open','/lantern/pull','/starter','/nickname','/feed','/shop/buy','/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/challenge/leave','/claim','/evolve','/bank/change','/ink/start','/ink/answer','/quest/claim','/title','/hero/claim','/dupe/convert','/collection/claim','/world/claim','/encounter/question','/encounter/answer','/encounter/skip','/encounter/close','/study/focus','/study/focus/clear'];if(!allowed.includes(path))fail('找不到此操作。',404);
  if(env.RAIDS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const member=await currentMembership(env,user);if(member&&['waiting','active','paused'].includes(member.status))fail('你正在共同討伐房間中，請先回到討伐。',409);}
  if(env.PVPS&&['/bag/use','/battle/start','/question','/answer','/challenge/start','/challenge/answer','/challenge/next','/evolve'].includes(path)){const activity=await activeActivity(env,user);if(activity?.mode==='pvp')fail('你正在 PVP 房間中，請先回到對決。',409);}
  if(['/battle/start','/question','/challenge/start','/encounter/question'].includes(path))body.bankId=await pickBankId(db,body.bankId);

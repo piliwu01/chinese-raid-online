@@ -28,7 +28,7 @@ import {categorize,comboMultiplier,SHINY_RATE,bumpQuest,questState,publicQuests,
 import {MAX_XP} from '../src/growth.js';
 import {claimCollection,publicCollection} from './collection.js';
 import {shuffleQuestion} from './option-shuffle.js';
-import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak,LATENT,gainLatent,checkAwaken} from './breakboost.js';
+import {startBreak,ensureBreak,cardFor,checkBoost,bankForCard,resolveBreak,afterCatch,visibleWeak,LATENT,gainLatent,checkAwaken,applyFocus,FOCUS} from './breakboost.js';
 
 export {taipeiDate};
 export const freshState = () => ({bestiary:BESTIARY_VERSION,growth:freshGrowth(),nickname:'',food:0,bond:0,days:[],fed:[],roundDays:[],passes:{},claimed:{},items:{},captured:[],selected:DEFAULT_SELECTED,battle:null,pending:null,challenge:null});
@@ -67,7 +67,7 @@ export function applyAction(s,route,b,now,bank=null){
   const chapter=b.chapter===undefined?(isUnlocked(s,s.chapter)?Number(s.chapter):1):Number(b.chapter);if(!chapterById(chapter))fail('沒有這個篇章。');if(!isUnlocked(s,chapter))fail('這個篇章還沒解鎖，先在前一章打倒或收服 3 隻神獸。',403);s.chapter=chapter;
   const picked=spiritRef(pickEnemy(chapter,now,selected.id)),enemy=Math.random()<SHINY_RATE?{...picked,shiny:true}:{...picked};const level=23+Math.floor(Math.random()*5);
   const playerHp=b.heal||!s.battle||s.battle.status==='lost'?185:s.battle.playerHp;
-  const bgs=chapterById(chapter).bgs;s.battle={id:crypto.randomUUID(),enemy,level,maxHp:ENEMY_HP,hp:ENEMY_HP,playerMaxHp:185,playerHp,status:'ready',chapter,scene:bgs[Math.floor(Math.random()*bgs.length)]};startBreak(s.battle,bank);s.pending=null;
+  const bgs=chapterById(chapter).bgs;s.battle={id:crypto.randomUUID(),enemy,level,maxHp:ENEMY_HP,hp:ENEMY_HP,playerMaxHp:185,playerHp,status:'ready',chapter,scene:bgs[Math.floor(Math.random()*bgs.length)]};startBreak(s.battle,bank);s.pending=null;if(s.studyFocus?.left>0)applyFocus(s.battle,s.studyFocus);
   const enc=rollEncounter(s,today);if(enc)event.encounter=enc.kind;
  }else if(route==='/question'){
   needPartner(s);if(!ownedSpirit(s,s.selected?.id))fail('這個角色尚未收服，請重新選擇自己的夥伴。',403);if(!s.battle||s.battle.status!=='ready')fail('請重新開始一場對戰。');
@@ -98,6 +98,7 @@ export function applyAction(s,route,b,now,bank=null){
   battle.playerHp=Math.max(0,battle.playerHp-enemyDamage);if(battle.playerHp===0)battle.status='lost';
   if(q.move!=='catch'||enemyDamage>0){const g=(enemyDamage>0?gainLatent(battle,LATENT.hurt):0)+(brk.breakNow?gainLatent(battle,LATENT.break):0);event.latent={value:battle.latent||0,gained:g,full:(battle.latent||0)>=LATENT.max};}
   if(q.awaken)event.awaken=true;
+  if(q.move!=='catch'&&s.studyFocus?.left>0){s.studyFocus.left--;event.focusLeft=s.studyFocus.left;if(!s.studyFocus.left){s.studyFocus=null;battle.focus=null;}}
   // 本週山海魔王：冒險傷害的 50% 同時打到魔王（week、weak、hpLeft 由伺服器注入）。
   if(b.world&&b.world.week){const left=Math.max(0,Number(b.world.hpLeft)||0),wd=Math.min(left,shareDamage(damage,q.category,b.world.weak));event.world={damage:wd,weak:!!(wd&&b.world.weak&&q.category===b.world.weak),week:b.world.week};}
   event.combat={damage,enemyDamage,caught,...battle,passive:event.passive||null,burn:event.burn||null,blocked:event.blocked||null};s.pending=null;
@@ -156,6 +157,12 @@ export function applyAction(s,route,b,now,bank=null){
   const e=s.encounter;if(!e||e.done)fail('目前沒有奇遇。',409);event.encounter=encounterDone(s,{kind:e.kind,skipped:true,text:'略過奇遇，繼續冒險。'});
  }else if(route==='/encounter/close'){
   if(s.encounter&&!s.encounter.done)fail('奇遇還沒結束。',409);s.encounter=null;event.message='繼續冒險！';
+ }else if(route==='/study/focus'){
+  const known=Object.keys(s.study?.cats||{}),cats=(Array.isArray(b.cats)?b.cats:[]).map(String).filter(c=>known.includes(c)).slice(0,2);
+  if(!cats.length)fail('請選擇你練習過的題型。');s.studyFocus={cats,left:FOCUS.questions};if(s.battle&&s.battle.status==='ready')applyFocus(s.battle,s.studyFocus);
+  event.message=`接下來 ${FOCUS.questions} 題，招式卡會從「${cats.join('、')}」出題！`;
+ }else if(route==='/study/focus/clear'){
+  s.studyFocus=null;if(s.battle){s.battle.focus=null;}event.message='已取消針對弱點練習。';
  }else if(route==='/hero/claim'){
   const got=claimHero(s,b.awards);if(!got.length)fail('目前沒有可領取的英雄榜獎勵。');event.awards=got;event.jade=got.reduce((a,b)=>a+b.jade,0);event.message=`英雄榜獎勵入帳：玉符 ${event.jade} 枚！`;
  }else if(route==='/collection/claim'){

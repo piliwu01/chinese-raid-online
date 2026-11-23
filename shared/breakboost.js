@@ -65,13 +65,13 @@ export function resolveBreak(battle,{correct,boost=0,category=null,random=Math.r
  }
  // 破盾只維持一題：這題結束（不論對錯）就回滿護盾。
  if(wasBroken){battle.broken=false;battle.shield=battle.maxShield;}
- battle.cards=dealCards(battle.cats,battle.weak,random);
+ battle.cards=dealCards(battle.focus?.length?battle.focus:battle.cats,battle.weak,random);
  return {mult,boost,shieldHit,breakNow,revealNow,wasBroken,noCounter:wasBroken,shield:battle.shield,maxShield:battle.maxShield,orbs:battle.orbs};
 }
 // 收服招式：不影響護盾與靈氣，只換一手招式卡；若正處於破盾，這題也算用掉破盾。
 export function afterCatch(battle,random=Math.random){
  const wasBroken=!!battle.broken;if(wasBroken){battle.broken=false;battle.shield=battle.maxShield;}
- battle.cards=dealCards(battle.cats,battle.weak,random);return {noCounter:wasBroken};
+ battle.cards=dealCards(battle.focus?.length?battle.focus:battle.cats,battle.weak,random);return {noCounter:wasBroken};
 }
 // 給畫面看的弱點：還沒翻開的換成 null（畫面顯示「？？」）。舊對戰沒有 revealed 時全部公開。
 export const visibleWeak=(weak,revealed)=>(weak||[]).map(c=>!Array.isArray(revealed)||revealed.includes(c)?c:null);
@@ -85,4 +85,11 @@ export function checkAwaken(battle,awaken,move){
  if(move==='catch')throw Object.assign(new Error('收服時不能發動覺醒。'),{status:400});
  if((battle.latent||0)<LATENT.max)throw Object.assign(new Error('潛力還沒集滿，不能發動覺醒。'),{status:400});
  return true;
+}
+
+// 2026-11-23 針對弱點練習：學生從學習健檢選了要加強的題型，接下來 20 題的招式卡都從這些題型發。
+export const FOCUS={questions:20};
+export function applyFocus(battle,focus,random=Math.random){
+ const cats=(focus?.left>0?focus.cats:[]).filter(c=>(battle.cats||[]).includes(c));
+ battle.focus=cats.length?cats:null;battle.cards=dealCards(battle.focus||battle.cats,battle.weak,random);return battle.focus;
 }
