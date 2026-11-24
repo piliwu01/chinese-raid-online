@@ -1121,3 +1121,31 @@ nav button i.nav-alert{position:absolute;top:2px;right:0;min-width:17px;height:1
 @media(max-width:480px){.cw-row{grid-template-columns:minmax(48px,72px) minmax(40px,1fr) 40px auto;}.cw-row small{display:none}}
 /* 2026-11-24 學習健檢獨立分頁 */
 .study-section{margin:0 auto;max-width:1400px}
+/* 2026-11-24 天燈十連抽 */
+.lantern-buttons{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.lantern-buttons .primary-button{flex:1 1 140px}
+.lantern-multi{background:linear-gradient(135deg,#f59e0b,#dc2626)!important;color:#fff}
+.lantern-hint{display:block;color:#b45309!important}
+.lucky-stage.is-multi{max-width:640px;max-height:calc(100vh - 32px);overflow:auto}
+.lantern-multi-result ul{list-style:none;margin:10px 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.lantern-multi-result li{position:relative;background:#fff;border:2px solid #e7d3a4;border-radius:12px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;animation:luckyPop .35s ease-out both}
+.lantern-multi-result li.is-rare{border-color:#f59e0b;background:radial-gradient(circle,#fef3c7,#fff 75%);box-shadow:0 0 10px rgba(245,158,11,.55)}
+.lantern-multi-result li.is-rare img{filter:drop-shadow(0 0 8px #f59e0b)}
+.lantern-multi-result img{width:100%;max-width:84px;aspect-ratio:1;object-fit:contain;image-rendering:pixelated}
+.lantern-multi-result b{font-size:.85rem;color:#7a3f12;line-height:1.2;text-align:center}
+.lantern-multi-result em{position:absolute;top:3px;font-style:normal;font-size:.68rem;font-weight:800;border-radius:6px;padding:0 4px}
+.lm-new{left:3px;background:#16a34a;color:#fff}
+.lm-pity{right:3px;background:#7c2d12;color:#fde68a}
+.lantern-multi-result p{margin:0;color:#44403c;font-size:.88rem;line-height:1.5}
+@media (max-width:520px){.lantern-multi-result ul{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){.lantern-multi-result li{animation:none!important}}
+/* 2026-11-24 寶箱全部打開 */
+.chest-all{background:linear-gradient(135deg,#16a34a,#0d9488)!important;color:#fff}
+.chest-all-result{animation:luckyPop .4s ease-out}
+.chest-all-result h3{margin:4px 0;padding:0 36px;color:#7a3f12}
+.chest-all-result ol{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;text-align:left}
+.chest-all-result ol li{display:flex;flex-direction:column;background:#fff;border:1px solid #e7d3a4;border-radius:10px;padding:5px 9px;animation:luckyPop .3s ease-out both}
+.chest-all-result ol li span{font-size:.75rem;color:#92400e}
+.chest-all-result ol li b{font-size:.88rem;color:#44403c;font-weight:700}
+.chest-all-result ol li.is-jackpot{border-color:#f59e0b;background:#fef3c7}
+@media (prefers-reduced-motion:reduce){.chest-all-result,.chest-all-result ol li{animation:none!important}}

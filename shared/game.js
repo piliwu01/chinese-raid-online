@@ -8,7 +8,7 @@ import {rollEncounter,resolveEncounterAnswer,encounterDone,publicEncounter} from
 import {pickBankQuestion} from './qpick.js';
 import {convertDupe} from './dupes.js';
 import {passiveFor,PASSIVE_RATE,PASSIVE_NUM} from './passives.js';
-import {luckyOf,noteCorrect,addChest,drawFortune,openChest,pullLantern,publicLucky,LUCKY} from './lucky.js';
+import {luckyOf,noteCorrect,addChest,drawFortune,openChest,openAllChests,pullLantern,pullLanternMulti,publicLucky,LUCKY} from './lucky.js';
 import {effectiveness,CRIT_RATE,CRIT} from './typechart.js';
 import {taipeiDate} from './game-date.js';
 import {recordStudy,notePurified} from './learning.js';
@@ -142,8 +142,12 @@ function applyRoute(s,route,b,now,bank=null){
   event=drawFortune(s,today,b.userKey||'');
  }else if(route==='/chest/open'){
   event=openChest(s);
+ }else if(route==='/chest/openAll'){
+  event=openAllChests(s);
  }else if(route==='/lantern/pull'){
   event=pullLantern(s,now);
+ }else if(route==='/lantern/pull10'){
+  event=pullLanternMulti(s,now);
  }else if(route==='/dupe/convert'){
   const r=convertDupe(s,b.id,b.to);event.convert=r;event.message=`${r.zhName} 副本卡已轉化為 ${r.label} ×${r.amount}${r.rare?'（稀有加倍）':''}。`;
  }else if(route==='/talent/learn'){

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {LUCKY,noteCorrect,addChest,drawFortune,openChest,pullLantern,publicLucky,isRare,luckyOf} from '../shared/lucky.js';
+import {LUCKY,noteCorrect,addChest,drawFortune,openChest,openAllChests,pullLantern,pullLanternMulti,publicLucky,isRare,luckyOf} from '../shared/lucky.js';
 import {featuredId} from '../shared/schedule.js';
 import {bagOf} from '../shared/items.js';
 const seq=(...v)=>{let i=0;return ()=>v[i++%v.length];};
@@ -79,4 +79,29 @@ test('單人答題：答完一輪得寶箱、答對累計玉符進度；路由�
   assert.ok(chestEvent,'一輪結束應掉寶箱');assert.ok(s.lucky.chests>=1);assert.equal(s.lucky.correct,n%20);
   const f=applyAction(s,'/fortune/draw',{userKey:'u'},Date.parse('2026-11-19T04:00:00Z'));assert.ok(f.level);
   const c=applyAction(s,'/chest/open',{},1);assert.ok(c.kind);
+});
+
+test('天燈十連抽：玉符不足 10 枚不能抽；一次扣 10 枚、得 10 張卡、保底照常', ()=>{
+  const now=Date.parse('2026-11-19T04:00:00Z');
+  const poor={captured:[]};luckyOf(poor).jade=9;
+  assert.throws(()=>pullLanternMulti(poor,now),/玉符不足 10 枚/);
+  assert.equal(poor.lucky.jade,9);assert.ok(!poor.dupes);
+  const s={captured:[]};luckyOf(s).jade=12;s.lucky.pity=5;
+  const r=pullLanternMulti(s,now,seq(0.99,0.99,0.3));
+  assert.equal(r.multi,true);assert.equal(r.results.length,10);
+  assert.equal(s.lucky.jade,2);
+  assert.equal(Object.values(s.dupes).reduce((a,b)=>a+b,0),10);
+  assert.ok(r.results[4].pityHit,'第 5 抽補滿保底');assert.equal(r.rare,1);
+  assert.equal(r.pity,5);assert.equal(publicLucky(s,'d').multi,10);
+});
+
+test('寶箱全部打開：一次開完、獎勵加總正確；沒有寶箱不能開', ()=>{
+  assert.throws(()=>openAllChests({}),/沒有可以打開/);
+  const s={food:0};luckyOf(s).chests=4;
+  const r=openAllChests(s,seq(0.1,0.5,0.7,0.3,0.99,0.1,0.9,0.8,0.2));
+  assert.equal(r.all,true);assert.equal(r.results.length,4);assert.equal(s.lucky.chests,0);
+  assert.equal(r.total.food,r.results.reduce((a,x)=>a+(x.food||0),0));
+  assert.equal(s.food,r.total.food);assert.equal(s.lucky.jade,r.total.jade);
+  const items=r.results.flatMap(x=>[x.item,x.item2].filter(Boolean)).length;
+  assert.equal(Object.values(r.total.items).reduce((a,b)=>a+b,0),items);
 });

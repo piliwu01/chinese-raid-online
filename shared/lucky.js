@@ -5,7 +5,7 @@ import {ITEMS,bagOf} from './items.js';
 import {LOOKS} from './lore.js';
 import {NIGHT_ONLY,featuredId} from './schedule.js';
 import {addDupe} from './trade.js';
-export const LUCKY={jadePerCorrect:20,jadeDailyMax:3,chestMax:10,inkPerChest:5,pity:10,rareRate:0.08,featuredRate:0.2};
+export const LUCKY={multi:10,jadePerCorrect:20,jadeDailyMax:3,chestMax:10,inkPerChest:5,pity:10,rareRate:0.08,featuredRate:0.2};
 export const FORTUNES=[{level:'上上籤',weight:10,food:2,jade:1,item:1},{level:'上籤',weight:30,food:2,jade:1,item:0},{level:'中籤',weight:45,food:1,jade:1,item:0},{level:'小吉',weight:15,food:1,jade:0,item:0}];
 const ADVICE={
  '上上籤':['如鳳鳴朝陽，今日讀書事半功倍，難題迎刃而解。','神獸護佑，靈光乍現，把握今天多挑戰幾題吧！','青丘祥雲聚頂，今天答題手感絕佳。'],
@@ -47,4 +47,17 @@ export function pullLantern(s,now,random=Math.random){
  l.pity=gotRare?0:l.pity+1;const count=addDupe(s,p.id),owned=(s.captured||[]).some(c=>c.id===p.id);
  return {id:p.id,zhName:p.zhName,type:p.type,rare:gotRare,pityHit:forced&&gotRare,count,owned,pity:l.pity};
 }
-export function publicLucky(s,day){const l=s.lucky||{};return {chests:l.chests||0,jade:l.jade||0,pity:l.pity||0,pityMax:LUCKY.pity,progress:l.correct||0,perJade:LUCKY.jadePerCorrect,jadeToday:l.jadeDay===day?(l.jadeToday||0):0,jadeDailyMax:LUCKY.jadeDailyMax,fortuneToday:l.fortuneDay===day,lastFortune:l.fortuneDay===day?l.lastFortune:null,rareRate:LUCKY.rareRate,featuredRate:LUCKY.featuredRate,rareIds:[...RARE]};}
+// 2026-11-24 寶箱「全部打開」：逐箱照原本機率開，最後把獎勵加總給前端顯示。
+export function openAllChests(s,random=Math.random){
+ const l=luckyOf(s);if(l.chests<=0)throw Object.assign(Error('沒有可以打開的寶箱。'),{status:409});
+ const results=[],total={food:0,jade:0,items:{}};
+ while(l.chests>0){const r=openChest(s,random);results.push(r);total.food+=r.food||0;total.jade+=r.jade||0;for(const it of [r.item,r.item2])if(it)total.items[it.name]=(total.items[it.name]||0)+1;}
+ return {all:true,results,total,jackpots:results.filter(r=>r.kind==='jackpot').length};
+}
+// 2026-11-24 十連抽：玉符 10 枚以上可一次點 10 盞天燈（逐盞照原本機率與保底計算，不打折、不額外送）。
+export function pullLanternMulti(s,now,random=Math.random){
+ const l=luckyOf(s),n=LUCKY.multi;if(l.jade<n)throw Object.assign(Error(`玉符不足 ${n} 枚，還不能十連抽。`),{status:409});
+ const results=[];for(let i=0;i<n;i++)results.push(pullLantern(s,now,random));
+ return {multi:true,results,rare:results.filter(r=>r.rare).length,pity:l.pity};
+}
+export function publicLucky(s,day){const l=s.lucky||{};return {chests:l.chests||0,jade:l.jade||0,pity:l.pity||0,pityMax:LUCKY.pity,multi:LUCKY.multi,progress:l.correct||0,perJade:LUCKY.jadePerCorrect,jadeToday:l.jadeDay===day?(l.jadeToday||0):0,jadeDailyMax:LUCKY.jadeDailyMax,fortuneToday:l.fortuneDay===day,lastFortune:l.fortuneDay===day?l.lastFortune:null,rareRate:LUCKY.rareRate,featuredRate:LUCKY.featuredRate,rareIds:[...RARE]};}
