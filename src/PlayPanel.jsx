@@ -4,7 +4,6 @@ import AiTutor from './AiTutor.jsx';
 import {ListChecks,Gift,Sparkles,Award,Clock,Check} from 'lucide-react';
 import {itemById} from '../shared/items.js';
 import {rewardText} from '../shared/collection.js';
-import StudyCheck from './StudyCheck.jsx';
 
 // 冒險準備頁的三張卡片：每日任務、墨漬怪巢穴（錯題複習）、收集套組與稱號。
 export default function PlayPanel({cloud,act,artwork,busy}){
@@ -18,7 +17,6 @@ export default function PlayPanel({cloud,act,artwork,busy}){
  const startInk=m=>run('/ink/start',{inkId:m.id,bankId:m.bankId},r=>{setResult(null);setFight({...r.event.question,inkId:m.id});});
  const answerInk=choice=>run('/ink/answer',{questionId:fight.id,choice},r=>{setResult(r.event);});
  return <section className="play-section" aria-label="每日任務與收藏">
-  <StudyCheck cloud={cloud} act={act} busy={busy}/>
   <div className="play-grid">
    <article className="play-card quest-card">
     <span className="cloud-eyebrow">DAILY QUESTS</span><h3><ListChecks size={20}/>今日任務</h3><p>每天換新任務，完成後領取食物和道具。</p>

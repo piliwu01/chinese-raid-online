@@ -1119,3 +1119,5 @@ nav button i.nav-alert{position:absolute;top:2px;right:0;min-width:17px;height:1
 .cw-focus p b{display:block;font-size:12px;color:#facc15}
 @media(max-width:820px){.cw-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:480px){.cw-row{grid-template-columns:minmax(48px,72px) minmax(40px,1fr) 40px auto;}.cw-row small{display:none}}
+/* 2026-11-24 學習健檢獨立分頁 */
+.study-section{margin:0 auto;max-width:1400px}
