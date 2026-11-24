@@ -6,22 +6,22 @@ import {levelFor} from '../src/growth.js';
 export const TALENT={every:5,resetJade:1};
 export const BRANCHES=[
  {id:'atk',name:'攻擊之道',icon:'⚔️',color:'#ff8f8f',nodes:[
-  {id:'a1',name:'銳筆',max:3,per:0.04,text:r=>`答對造成的傷害 +${r*4}%`,where:'冒險・討伐・PVP'},
-  {id:'a2',name:'會心',max:2,per:0.05,text:r=>`暴擊機率 +${r*5}%`,where:'冒險'},
-  {id:'a3',name:'乘勝',max:2,per:0.05,text:r=>`連擊 3 以上時，傷害再 +${r*5}%`,where:'冒險・討伐'},
-  {id:'a4',name:'破陣',max:1,per:0.5,text:()=>'破盾後的傷害由 ×2 提高為 ×2.5',where:'冒險・討伐'},
+  {id:'a1',icon:'🖋️',name:'銳筆',max:3,per:0.04,text:r=>`答對造成的傷害 +${r*4}%`,where:'冒險・討伐・PVP'},
+  {id:'a2',icon:'💥',name:'會心',max:2,per:0.05,text:r=>`暴擊機率 +${r*5}%`,where:'冒險'},
+  {id:'a3',icon:'🔥',name:'乘勝',max:2,per:0.05,text:r=>`連擊 3 以上時，傷害再 +${r*5}%`,where:'冒險・討伐'},
+  {id:'a4',icon:'🗡️',name:'破陣',max:1,per:0.5,text:()=>'破盾後的傷害由 ×2 提高為 ×2.5',where:'冒險・討伐'},
  ]},
  {id:'def',name:'守護之道',icon:'🛡️',color:'#8fd3ff',nodes:[
-  {id:'d1',name:'厚甲',max:3,per:10,text:r=>`最大 HP +${r*10}；討伐修復護盾 +${r*2}`,where:'冒險・討伐・PVP'},
-  {id:'d2',name:'鎮心',max:2,per:0.08,text:r=>`受到的反擊傷害 −${r*8}%`,where:'冒險'},
-  {id:'d3',name:'良藥',max:2,per:10,text:r=>`傷藥多回復 ${r*10} HP`,where:'冒險・PVP'},
-  {id:'d4',name:'不屈',max:1,per:1,text:()=>'每場第一次被打倒時，留下 1 HP',where:'冒險・PVP'},
+  {id:'d1',icon:'🛡️',name:'厚甲',max:3,per:10,text:r=>`最大 HP +${r*10}；討伐修復護盾 +${r*2}`,where:'冒險・討伐・PVP'},
+  {id:'d2',icon:'🧘',name:'鎮心',max:2,per:0.08,text:r=>`受到的反擊傷害 −${r*8}%`,where:'冒險'},
+  {id:'d3',icon:'🧪',name:'良藥',max:2,per:10,text:r=>`傷藥多回復 ${r*10} HP`,where:'冒險・PVP'},
+  {id:'d4',icon:'💪',name:'不屈',max:1,per:1,text:()=>'每場第一次被打倒時，留下 1 HP',where:'冒險・PVP'},
  ]},
  {id:'wis',name:'學識之道',icon:'📜',color:'#b9f28f',nodes:[
-  {id:'w1',name:'勤學',max:3,per:0.05,text:r=>`冒險答題得到的 XP +${r*5}%`,where:'冒險'},
-  {id:'w2',name:'蓄勢',max:2,per:0.2,text:r=>`潛力累積速度 +${r*20}%`,where:'冒險'},
-  {id:'w3',name:'慧眼',max:2,per:1,text:r=>r>=2?'開戰就翻開全部弱點，而且靈氣多 1 顆':'開戰就翻開全部弱點',where:'冒險'},
-  {id:'w4',name:'博學',max:1,per:1,text:()=>'淨化墨漬怪的 XP 與食物加倍',where:'墨漬怪巢穴'},
+  {id:'w1',icon:'📖',name:'勤學',max:3,per:0.05,text:r=>`冒險答題得到的 XP +${r*5}%`,where:'冒險'},
+  {id:'w2',icon:'🌱',name:'蓄勢',max:2,per:0.2,text:r=>`潛力累積速度 +${r*20}%`,where:'冒險'},
+  {id:'w3',icon:'👁️',name:'慧眼',max:2,per:1,text:r=>r>=2?'開戰就翻開全部弱點，而且靈氣多 1 顆':'開戰就翻開全部弱點',where:'冒險'},
+  {id:'w4',icon:'🎓',name:'博學',max:1,per:1,text:()=>'淨化墨漬怪的 XP 與食物加倍',where:'墨漬怪巢穴'},
  ]},
 ];
 export const NODES=Object.fromEntries(BRANCHES.flatMap(b=>b.nodes.map((n,i)=>[n.id,{...n,branch:b.id,index:i}])));
