@@ -1,5 +1,6 @@
 export const ENEMY_HP=500;
 export const ENRAGE={at:0.5,mult:1.5};
+import {grantAllies,allyPending,publicAllies} from './allies.js';
 import {claimHero} from './hero.js';
 import {talentFx,learnTalent,resetTalents,damageBonus} from './talents.js';
 import {claimWorld,shareDamage} from './world-boss.js';
@@ -38,7 +39,7 @@ export const itemName = (starter,at) => ({2010:['雷之徽章','雷霆之證'],2
 export const requiredDays = at => at===50?7:14;
 export function fail(message,status=400){throw Object.assign(new Error(message),{status});}
 export const publicQuestion = q => q ? {id:q.id,question:q.question,options:q.options,optionTexts:q.optionTexts,timeLimit:q.timeLimit,expires:q.expires,difficulty:q.difficulty,category:q.category} : null;
-export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,worldQ,encounter,encounterDay,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:[...earnedTitles(s.captured),...(s.extraTitles||[])],encounter:publicEncounter(encounter,publicQuestion),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
+export function publicState(s,now=Date.now()){migrateState(s);const dupes=publicDupes(s);const {pending,challenge,inkNest,inkFight,seenQ,worldQ,encounter,encounterDay,...out}=s;const day=taipeiDate(now);return {...out,battle:out.battle?{...out.battle,weak:visibleWeak(out.battle.weak,out.battle.revealed)}:out.battle,dupes,chapters:publicChapters(s,now),lucky:publicLucky(s,day),schedule:publicSchedule(now,chapterOf),chapter:Number(s.chapter)||1,combo:s.combo||0,quests:publicQuests(s,day),inkNest:publicInk(s,day),inkFight:inkFight?publicQuestion(inkFight):null,titles:[...earnedTitles(s.captured),...(s.extraTitles||[])],encounter:publicEncounter(encounter,publicQuestion),...publicCollection(s),title:s.title||'',selected:s.growth.starter?(ownedSpirit(s,s.selected?.id)||partnerFor(s.growth)):s.selected,bag:bagOf(s),allies:publicAllies(s),allyPending:!!s.growth?.starter&&allyPending(s),challenge:challenge?{at:challenge.at,index:challenge.index,total:challenge.questions.length,correct:challenge.correct,done:challenge.done,passed:challenge.passed,question:publicQuestion(challenge.questions[challenge.index])}:null};}
 function needPartner(s){if(!s.growth.starter)fail('請先選擇專屬夥伴。');}
 function questionFor(bank,diff,now,st=null){
  let q;
@@ -47,7 +48,9 @@ function questionFor(bank,diff,now,st=null){
  return {...q,id:crypto.randomUUID(),bankId:bank?.bankId||'math-auto',timeLimit:bank?.timeLimitSeconds||({easy:10,medium:12,hard:15}[diff]||18),expires:now+(bank?.timeLimitSeconds||({easy:10,medium:12,hard:15}[diff]||18))*1000};
 }
 function resolve(q,choice,now){if(choice!==null&&!q.options.includes(choice))fail('答案不在選項中。');return {correct:choice!==null&&now<=q.expires&&choice===q.answer,question:q.question,answer:q.answer,answerText:q.optionTexts?.[q.answer]??String(q.answer),explanation:q.explanation||'仔細檢查運算步驟，再試一次。',sourceRef:q.sourceRef||'',bankId:q.bankId,sourceId:q.questionId,order:q.shuffled||null,timedOut:now>q.expires||choice===null};}
-export function applyAction(s,route,b,now,bank=null){
+// 2026-11-24 每次操作成功後，補上該加入的同行夥伴（沒選到的初始夥伴）。
+export function applyAction(s,route,b,now,bank=null){const event=applyRoute(s,route,b,now,bank);if(s.growth?.starter){const joined=grantAllies(s);if(joined.length&&event&&typeof event==='object')event.allies=joined;}return event;}
+function applyRoute(s,route,b,now,bank=null){
  migrateState(s);
  const today=taipeiDate(now); let event={};
  if(route==='/starter'){
@@ -176,6 +179,8 @@ export function applyAction(s,route,b,now,bank=null){
   const value=String(b.title||'');if(value&&![...earnedTitles(s.captured),...(s.extraTitles||[])].includes(value))fail('還沒有取得這個稱號。',403);s.title=value;event.message=value?`已配戴稱號「${value}」。`:'已取消配戴稱號。';
  }else if(route==='/bank/change'){
   s.challenge=null;s.pending=null;
+ }else if(route==='/ally/sync'){
+  needPartner(s);event.message=allyPending(s)?'':'同行夥伴都已經到齊了。';
  }else fail('找不到此操作。',404);
  return event;
 }
