@@ -349,7 +349,7 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
   const freshTally = () => ({ answered: 0, correct: 0, xp: 0, maxCombo: 0, food: 0, jade: 0, chest: 0, breaks: 0 });
   const [tally, setTally] = useState(freshTally);
   const [boost, setBoost] = useState(0);
-  const takeBreak = b => { if (!b) return; setBrk({ weak: b.weak || [], shield: b.shield || 0, maxShield: b.maxShield || 0, broken: !!b.broken, orbs: b.orbs || 0, latent: b.latent || 0, burn: b.burn || 0, cards: b.cards || [] }); setBoost(0); setAwaken(false); };
+  const takeBreak = b => { if (!b) return; setBrk({ weak: b.weak || [], shield: b.shield || 0, maxShield: b.maxShield || 0, broken: !!b.broken, orbs: b.orbs || 0, latent: b.latent || 0, burn: b.burn || 0, burnStacks: b.burnStacks || 0, burnDamage: b.burnDamage || 0, cards: b.cards || [] }); setBoost(0); setAwaken(false); };
   const showPassive = (pv) => { if(!pv) return; const fx={key:Date.now(),icon:pv.icon,name:pv.name,text:pv.text}; setPassiveFx(fx); addLog(`${pv.icon} 被動【${pv.name}】發動！${pv.text}`); setTimeout(()=>setPassiveFx(f=>f&&f.key===fx.key?null:f),2200); };
   useEffect(()=>{window.scrollTo(0,0);},[view]);
   useEffect(()=>{const fit=()=>{const w=window.innerWidth,h=window.innerHeight;const mobile=w<=760;const raw=mobile?Math.min(w/390,h/844):Math.min(w/1366,h/768);const s=Math.max(mobile?0.9:0.9,Math.min(mobile?1.15:1.45,raw));document.documentElement.style.setProperty('--bf',s.toFixed(3));};fit();window.addEventListener('resize',fit);return ()=>window.removeEventListener('resize',fit);},[]);
@@ -436,7 +436,7 @@ export default function App({cloud,act,user,cloudBanks,refreshBanks,cloudBusy}) 
   const fighting = view==='battle' && !['won','lost','caught'].includes(battleState);
   const enemyStatus = fighting ? [
     brk?.broken && { key:'break', icon:'💥', label:'破盾', n:1, unit:'題', tone:'buff', tip:'破盾：這一題傷害 ×2，答錯也不會被反擊' },
-    (brk?.burn||0)>0 && { key:'burn', icon:'🔥', label:'灼燒', n:brk.burn, unit:'回', tone:'buff', tip:'灼燒：每回合扣對手 HP' },
+    (brk?.burn||0)>0 && { key:'burn', icon:'🔥', label:(brk.burnStacks||1)>1?`灼燒×${brk.burnStacks}`:'灼燒', n:brk.burn, unit:'回', tone:'buff', tip:`灼燒${(brk.burnStacks||1)>1?` ${brk.burnStacks} 層`:''}：每回合扣對手 ${brk.burnDamage||''} HP` },
     enemyEnraged && { key:'rage', icon:'😡', label:'暴走', tone:'warn', tip:'暴走：答錯時的反擊傷害 ×1.5' },
     enemyWeak && { key:'weak', icon:'💫', label:'虛弱', tone:'buff', tip:'虛弱：HP 很低，可以收服' },
   ] : [];

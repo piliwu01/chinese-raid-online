@@ -7,10 +7,10 @@ test('passive belongs to the whole evolution line; wild partners have none',()=>
 test('夔: 15% extra 50% damage on a correct attack',()=>{const s=setup(2010);// rolls: crit(0.9 no), base rand 0, passive 0.1 yes
  const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'kui');assert.equal(e.combat.damage,22+11);assert.equal(s.battle.hp,500-33);
  const s2=setup(2010);const e2=answer(s2,true,seq(0.9,0,0.5));assert.equal(e2.passive,undefined);assert.equal(e2.combat.damage,22);});
-test('當康: heals 25 HP on a correct answer, never above max, no items',()=>{const s=setup(2007);s.battle.playerHp=100;const food=s.food;const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'dangkang');assert.equal(s.battle.playerHp,125);assert.equal(s.food,food);
+test('當康: heals 30 HP on a correct answer, never above max, no items',()=>{const s=setup(2007);s.battle.playerHp=100;const food=s.food;const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'dangkang');assert.equal(s.battle.playerHp,130);assert.equal(s.food,food);
  const s2=setup(2007);s2.battle.playerHp=180;answer(s2,true,seq(0.9,0,0.1));assert.equal(s2.battle.playerHp,185);});
-test('畢方: burn 15 HP for the next 3 turns (also on wrong-answer turns) and can finish the enemy',()=>{const s=setup(2001);const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'bifang');assert.equal(s.battle.burn,3);const hp=s.battle.hp;
- const e2=answer(s,false,seq(0.5));assert.equal(e2.burn.damage,15);assert.equal(s.battle.hp,hp-15);assert.equal(s.battle.burn,2);
+test('畢方: burn 20 HP for the next 3 turns (also on wrong-answer turns) and can finish the enemy',()=>{const s=setup(2001);const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'bifang');assert.equal(s.battle.burn,3);const hp=s.battle.hp;
+ const e2=answer(s,false,seq(0.5));assert.equal(e2.burn.damage,20);assert.equal(s.battle.hp,hp-20);assert.equal(s.battle.burn,2);
  s.battle.hp=10;const e3=answer(s,false,seq(0.5));assert.equal(e3.burn.damage,10);assert.equal(s.battle.status,'won');assert.equal(e3.combat.enemyDamage,0);});
 test('旋龜: correct answer may raise a shell that blocks later counterattacks (1/2/3 by stage)',()=>{const s=setup(2004);
  const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'xuangui');assert.equal(s.battle.shell,1);
@@ -18,5 +18,12 @@ test('旋龜: correct answer may raise a shell that blocks later counterattacks 
  const e3=answer(s,false,seq(0));assert.equal(e3.combat.enemyDamage,18);
  const s3=setup(2004);s3.selected={...s3.selected,id:2006};s3.captured.push({id:2006,name:'Yinglong',zhName:'應龍',type:'water',gen:7,at:1});answer(s3,true,seq(0.9,0,0.1));assert.equal(s3.battle.shell,3);});
 test('effects grow with evolution stage',()=>{const s=setup(2010);s.captured.push({id:2012,name:'Leishen',zhName:'雷神',type:'electric',gen:7,at:1});s.selected={...s.selected,id:2012};const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.combat.damage,44);
- const d=setup(2007);d.captured.push({id:2009,name:'Chenghuang',zhName:'乘黃',type:'grass',gen:6,at:1});d.selected={...d.selected,id:2009};d.battle.playerHp=100;answer(d,true,seq(0.9,0,0.1));assert.equal(d.battle.playerHp,150);
- const b=setup(2001);b.captured.push({id:2002,name:'Luanniao',zhName:'鸞鳥',type:'fire',gen:2,at:1});b.selected={...b.selected,id:2002};answer(b,true,seq(0.9,0,0.1));const hp=b.battle.hp;const e2=answer(b,false,seq(0.5));assert.equal(e2.burn.damage,20);assert.equal(b.battle.hp,hp-20);});
+ const d=setup(2007);d.captured.push({id:2009,name:'Chenghuang',zhName:'乘黃',type:'grass',gen:6,at:1});d.selected={...d.selected,id:2009};d.battle.playerHp=100;answer(d,true,seq(0.9,0,0.1));assert.equal(d.battle.playerHp,160);
+ const b=setup(2001);b.captured.push({id:2002,name:'Luanniao',zhName:'鸞鳥',type:'fire',gen:2,at:1});b.selected={...b.selected,id:2002};answer(b,true,seq(0.9,0,0.1));const hp=b.battle.hp;const e2=answer(b,false,seq(0.5));assert.equal(e2.burn.damage,25);assert.equal(b.battle.hp,hp-25);});
+test('當康 at full HP: the harvest turns into 1 spirit orb (not above the max)',()=>{const s=setup(2007);const o=s.battle.orbs;const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.orb,true);assert.equal(s.battle.orbs,o+2);assert.equal(s.battle.playerHp,185);
+ const t=setup(2007);t.battle.orbs=5;const e2=answer(t,true,seq(0.9,0,0.1));assert.equal(e2.passive,undefined);assert.equal(t.battle.orbs,5);});
+test('畢方: triggering again while burning stacks to 2 layers, refreshes 3 turns, and clears after',()=>{const s=setup(2001);answer(s,true,seq(0.9,0,0.1));assert.equal(s.battle.burnStacks,1);
+ const e=answer(s,true,seq(0.9,0,0.1));assert.equal(e.passive.id,'bifang');assert.equal(s.battle.burnStacks,2);assert.equal(s.battle.burnDamage,40);assert.equal(s.battle.burn,3);assert.match(e.passive.text,/2 層/);
+ answer(s,true,seq(0.9,0,0.1));assert.equal(s.battle.burnStacks,2);assert.equal(s.battle.burnDamage,40);
+ s.battle.hp=500;for(let i=0;i<3;i++)answer(s,false,seq(0.5));assert.equal(s.battle.burn,0);assert.equal(s.battle.burnStacks,0);
+ answer(s,true,seq(0.9,0,0.1));assert.equal(s.battle.burnStacks,1);assert.equal(s.battle.burnDamage,20);});
