@@ -3,6 +3,7 @@
 // - 護盾：敵人有 2 種弱點題型、4 點護盾。答對弱點題型護盾 -1；歸零即「破盾」：
 //   下一題傷害 ×2，且這題答錯也不會被反擊；這題結束後護盾回滿。
 // - 靈氣：開場 1 點，每答對 +1（最多 5）。出招前可投入 0～3 點，傷害 ×1.5／×2／×2.5；不論對錯都會用掉。
+// - 2026-11-24 多段攻擊：投入 N 點靈氣＝打 1+N 下，答對弱點題型時護盾扣 1+N（不超過剩餘護盾）。
 import {categorize,weaknessPool} from './play.js';
 
 export const BREAK={shield:4,weakCount:2,minPool:10,orbsStart:1,orbsMax:5,boostMax:3,boostMult:[1,1.5,2,2.5],breakMult:2};
@@ -53,20 +54,20 @@ export function bankForCard(bank,card){
 // 答題結算（攻擊招式）：回傳傷害倍率與破盾事件，並更新護盾、靈氣、招式卡。
 // 呼叫時機：伺服器算出基礎傷害之前；correct＝是否答對；category＝這題的題型。
 export function resolveBreak(battle,{correct,boost=0,category=null,random=Math.random}){
- const wasBroken=!!battle.broken;let mult=1,shieldHit=false,breakNow=false;
+ const wasBroken=!!battle.broken;let mult=1,shieldHit=false,breakNow=false,hits=0;
  battle.orbs=Math.max(0,(battle.orbs||0)-boost);
  let revealNow=null;
  if(correct&&category&&battle.weak?.includes(category)&&Array.isArray(battle.revealed)&&!battle.revealed.includes(category)){battle.revealed.push(category);revealNow=category;}
  if(correct){
   mult*=boostMultiplier(boost);
   if(wasBroken)mult*=BREAK.breakMult;
-  else if(battle.maxShield&&category&&battle.weak?.includes(category)){battle.shield=Math.max(0,battle.shield-1);shieldHit=true;if(battle.shield===0){battle.broken=true;breakNow=true;}}
+  else if(battle.maxShield&&category&&battle.weak?.includes(category)){hits=Math.min(battle.shield,1+boost);battle.shield-=hits;shieldHit=true;if(battle.shield===0){battle.broken=true;breakNow=true;}}
   battle.orbs=Math.min(BREAK.orbsMax,battle.orbs+1);
  }
  // 破盾只維持一題：這題結束（不論對錯）就回滿護盾。
  if(wasBroken){battle.broken=false;battle.shield=battle.maxShield;}
  battle.cards=dealCards(battle.focus?.length?battle.focus:battle.cats,battle.weak,random);
- return {mult,boost,shieldHit,breakNow,revealNow,wasBroken,noCounter:wasBroken,shield:battle.shield,maxShield:battle.maxShield,orbs:battle.orbs};
+ return {mult,boost,shieldHit,hits,breakNow,revealNow,wasBroken,noCounter:wasBroken,shield:battle.shield,maxShield:battle.maxShield,orbs:battle.orbs};
 }
 // 收服招式：不影響護盾與靈氣，只換一手招式卡；若正處於破盾，這題也算用掉破盾。
 export function afterCatch(battle,random=Math.random){

@@ -103,3 +103,14 @@ test('latent power: counters and breaks fill it; awaken needs a full gauge, trip
  s.battle.latent=LATENT.max;s.combo=0;applyAction(s,'/question',{move:'quick',awaken:true},T0,bank);const hit=answer(s,true);assert.equal(hit.awaken,true);assert.ok(hit.combat.damage>=22*LATENT.mult*0.8,'傷害 ×3');
  const b={weak:['成語'],revealed:['成語'],shield:1,maxShield:4,broken:false,orbs:1,cards:[],cats:['成語'],latent:0};resolveBreak(b,{correct:true,category:'成語'});assert.equal(b.broken,true);
 });
+
+test('2026-11-24 multi-hit: boosting N orbs on a weak answer removes 1+N shield, capped at what is left',()=>{
+ const b={weak:['成語','修辭'],shield:4,maxShield:4,broken:false,orbs:5,cards:[]};
+ const r=resolveBreak(b,{correct:true,boost:2,category:'成語'});assert.equal(r.hits,3);assert.equal(b.shield,1);assert.equal(r.breakNow,false);
+ const r2=resolveBreak(b,{correct:true,boost:3,category:'修辭'});assert.equal(r2.hits,1,'只剩 1 盾就只算 1 下');assert.equal(r2.breakNow,true);assert.equal(b.shield,0);
+ const c={weak:['成語'],shield:4,maxShield:4,broken:false,orbs:5,cards:[]};
+ assert.equal(resolveBreak(c,{correct:false,boost:3,category:'成語'}).hits,0,'答錯不扣盾');assert.equal(c.shield,4);
+ assert.equal(resolveBreak(c,{correct:true,boost:1,category:'對聯'}).hits,0,'非弱點不扣盾');assert.equal(c.shield,4);
+ const d={weak:['成語'],shield:4,maxShield:4,broken:false,orbs:5,cards:[]};
+ assert.equal(resolveBreak(d,{correct:true,boost:3,category:'成語'}).breakNow,true,'投入 3 點一次破盾');
+});

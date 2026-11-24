@@ -1,15 +1,27 @@
 // 個人對戰的「破盾與蓄力」：護盾與弱點放在敵人血條卡片下方，靈氣與投入點數放在夥伴血條卡片下方。
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { BREAK, LATENT, boostMultiplier } from '../shared/breakboost.js';
 
 export function EnemyShield({ brk }) {
+  // 2026-11-24 護盾被打掉時，掉的那幾格逐格碎裂（多段攻擊一次可能碎好幾格）。
+  const prev = useRef(brk?.shield), [lost, setLost] = useState(null);
+  useEffect(() => {
+    const before = prev.current, now = brk?.shield; prev.current = now;
+    if (typeof before === 'number' && typeof now === 'number' && now < before) {
+      setLost({ from: now, to: before, key: Date.now() });
+      const t = setTimeout(() => setLost(null), 900 + (before - now) * 120); return () => clearTimeout(t);
+    }
+  }, [brk?.shield]);
   if (!brk?.maxShield) return null;
   return (
     <div className="hp-break" aria-label="護盾與弱點">
       <div className="hp-break-row">
         <span className="break-label">護盾</span>
         <span className="shield-pips" role="img" aria-label={`護盾 ${brk.shield} / ${brk.maxShield}`}>
-          {Array.from({ length: brk.maxShield }, (_, i) => <i key={i} className={i < brk.shield ? 'on' : ''} />)}
+          {Array.from({ length: brk.maxShield }, (_, i) => {
+            const crack = lost && i >= lost.from && i < lost.to;
+            return <i key={crack ? `${i}-${lost.key}` : i} className={i < brk.shield ? 'on' : crack ? 'shatter' : ''} style={crack ? { animationDelay: `${(lost.to - 1 - i) * 0.12}s` } : undefined} />;
+          })}
         </span>
         {brk.broken && <strong className="break-state">破盾！傷害 ×{BREAK.breakMult}</strong>}
       </div>
@@ -30,7 +42,7 @@ export function PlayerBoost({ brk, boost, setBoost, disabled, awaken = false, se
         <span className="orb-pips" role="img" aria-label={`靈氣 ${orbs} / ${BREAK.orbsMax}`}>
           {Array.from({ length: BREAK.orbsMax }, (_, i) => <i key={i} className={i < orbs ? 'on' : ''} />)}
         </span>
-        <small className={`boost-hint ${!awaken && !boost ? 'is-none' : ''}`}>{awaken ? `覺醒 ×${LATENT.mult}` : boost ? `×${boostMultiplier(boost)}` : '不加成'}</small>
+        <small className={`boost-hint ${!awaken && !boost ? 'is-none' : ''}`}>{awaken ? `覺醒 ×${LATENT.mult}` : boost ? `${boost + 1} 連擊 ×${boostMultiplier(boost)}` : '不加成'}</small>
       </div>
       <div className="hp-break-row boost-pick" role="group" aria-label="投入靈氣">
         <span className="break-label">投入</span>

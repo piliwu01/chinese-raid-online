@@ -1152,3 +1152,21 @@ nav button i.nav-alert{position:absolute;top:2px;right:0;min-width:17px;height:1
 /* 2026-11-24 對戰畫面延伸到最右邊：取消 1320px 上限，右側只留「戰鬥紀錄」拉把的寬度 */
 body.battle-focus .main-wrap>.battle-layout{max-width:none;margin-left:0;margin-right:0}
 @media(min-width:761px){body.battle-focus .main-wrap{padding-right:68px}}
+/* 2026-11-24 蓄力多段攻擊演出：夥伴蓄力光環、連擊環、護盾逐格碎裂、靈氣全開特寫 */
+.player-fighter.boost-aura::before{content:'';position:absolute;left:50%;bottom:4%;width:78%;height:22%;transform:translateX(-50%);border-radius:50%;background:radial-gradient(ellipse,var(--aura) 0%,transparent 70%);opacity:.85;z-index:-1;animation:auraPulse 1.1s ease-in-out infinite alternate;pointer-events:none}
+.player-fighter.boost-aura img{filter:drop-shadow(0 0 var(--glow) var(--aura))}
+.player-fighter.boost-1{--aura:#7cc7ff;--glow:8px}
+.player-fighter.boost-2{--aura:#b38cff;--glow:14px}
+.player-fighter.boost-3{--aura:#ffd34d;--glow:22px}
+.player-fighter.boost-awaken{--aura:#ff7ad9;--glow:24px}
+.player-fighter.boost-3::after,.player-fighter.boost-awaken::after{content:'';position:absolute;inset:8% 12%;border-radius:50%;border:2px dashed var(--aura);opacity:.55;animation:auraSpin 3s linear infinite;pointer-events:none}
+@keyframes auraPulse{from{transform:translateX(-50%) scale(.85);opacity:.55}to{transform:translateX(-50%) scale(1.12);opacity:.95}}
+@keyframes auraSpin{to{transform:rotate(360deg)}}
+.hit-fx b{translate:var(--off,0) calc(var(--off,0) * -.5)}
+.hit-fx .multi-hit{position:absolute;left:-70px;top:-112px;width:140px;text-align:center;font-style:normal;font:900 calc(26px * var(--bf,1))/1 'Noto Sans TC',system-ui;color:#fff;text-shadow:0 0 10px #f7d65c,2px 2px 0 #7a3f12;animation:multiHit .9s ease-out forwards;white-space:nowrap}
+@keyframes multiHit{0%{transform:scale(.4);opacity:0}25%{transform:scale(1.15);opacity:1}70%{transform:scale(1);opacity:1}100%{transform:translateY(-14px);opacity:0}}
+.shield-pips i.shatter{animation:pipShatter .55s ease-out both;background:#c6bdff;border-color:#fff}
+@keyframes pipShatter{0%{transform:scale(1);opacity:1;box-shadow:0 0 0 #fff}35%{transform:scale(1.7);opacity:1;box-shadow:0 0 12px #fff}100%{transform:scale(.3) rotate(45deg);opacity:0;background:transparent}}
+.break-cutin.is-boost .cutin-band{border-color:#ffd34d!important;background:linear-gradient(90deg,transparent,#5a3a05ee 15%,#b7791fee 50%,#5a3a05ee 85%,transparent)!important}
+.break-cutin.is-boost .cutin-text strong{color:#fffbea!important;text-shadow:0 0 18px #ffd34d,3px 3px 0 #7a3f12!important}
+@media(prefers-reduced-motion:reduce){.player-fighter.boost-aura::before,.player-fighter.boost-aura::after,.hit-fx .multi-hit,.shield-pips i.shatter{animation:none!important}.shield-pips i.shatter{opacity:0}}
