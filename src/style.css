@@ -1149,3 +1149,6 @@ nav button i.nav-alert{position:absolute;top:2px;right:0;min-width:17px;height:1
 .chest-all-result ol li b{font-size:.88rem;color:#44403c;font-weight:700}
 .chest-all-result ol li.is-jackpot{border-color:#f59e0b;background:#fef3c7}
 @media (prefers-reduced-motion:reduce){.chest-all-result,.chest-all-result ol li{animation:none!important}}
+/* 2026-11-24 對戰畫面延伸到最右邊：取消 1320px 上限，右側只留「戰鬥紀錄」拉把的寬度 */
+body.battle-focus .main-wrap>.battle-layout{max-width:none;margin-left:0;margin-right:0}
+@media(min-width:761px){body.battle-focus .main-wrap{padding-right:68px}}
