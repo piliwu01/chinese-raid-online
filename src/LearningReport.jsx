@@ -1,13 +1,14 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {api} from './api.js';
+import ClassWeak from './ClassWeak.jsx';
 const pct=x=>x==null?'—':`${Math.round(x*100)}%`;
 const when=ms=>{if(!ms)return '尚未上線';const d=Date.now()-ms;if(d<3600000)return `${Math.max(1,Math.round(d/60000))} 分鐘前`;if(d<86400000)return `${Math.round(d/3600000)} 小時前`;return `${Math.round(d/86400000)} 天前`;};
 const time=ms=>ms?new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(ms)):'';
 const SORTS={username:['座號／帳號',(a,b)=>a.username.localeCompare(b.username)],accuracy:['答對率低→高',(a,b)=>(a.accuracy??2)-(b.accuracy??2)],answered:['作答數多→少',(a,b)=>b.answered-a.answered],last:['最久未上線',(a,b)=>(a.lastActive||0)-(b.lastActive||0)]};
 // 老師端：個人學習報告，可依班級篩選、排序、點開看題型弱點，並匯出 CSV（Excel 可開）。
 export default function LearningReport(){
- const [cls,setCls]=useState('313'),[rows,setRows]=useState(null),[err,setErr]=useState(''),[sort,setSort]=useState('username'),[open,setOpen]=useState(null);
- async function load(){setErr('');try{setRows((await api('/admin/report',{className:cls.trim()})).students);}catch(e){setErr(e.message);}}
+ const [cls,setCls]=useState('313'),[rows,setRows]=useState(null),[err,setErr]=useState(''),[sort,setSort]=useState('username'),[open,setOpen]=useState(null),[asked,setAsked]=useState(null);
+ async function load(){setErr('');try{setRows((await api('/admin/report',{className:cls.trim()})).students);setAsked({cls:cls.trim(),at:Date.now()});}catch(e){setErr(e.message);}}
  useEffect(()=>{load();},[]);
  const list=useMemo(()=>[...(rows||[])].sort(SORTS[sort][1]),[rows,sort]);
  const sum=useMemo(()=>{const r=rows||[],a=r.reduce((n,x)=>n+x.answered,0),c=r.reduce((n,x)=>n+x.correct,0),cats={};for(const x of r)for(const k of x.cats){cats[k.category]||={r:0,t:0};cats[k.category].r+=k.right;cats[k.category].t+=k.total;}
@@ -23,6 +24,7 @@ export default function LearningReport(){
    <button className="primary-button" disabled={!rows?.length} onClick={exportCsv}>匯出 Excel（CSV）</button></div>
   {err&&<p className="cloud-error">{err}</p>}
   {rows&&<div className="report-summary"><div><b>{sum.n}</b><span>位學生</span></div><div><b>{sum.active}</b><span>人近 7 天有上線</span></div><div><b>{sum.answered}</b><span>總作答數</span></div><div><b>{pct(sum.acc)}</b><span>全班答對率</span></div><div className="wide"><span>全班較弱題型</span><b>{sum.weak.length?sum.weak.map(w=>`${w.k} ${pct(w.rate)}`).join('、'):'資料累積中'}</b></div></div>}
+  {asked&&<ClassWeak cls={asked.cls} stamp={asked.at}/>}
   {rows&&(list.length?<div className="report-table"><table><thead><tr><th>學生</th><th>夥伴</th><th>作答</th><th>答對率</th><th>近 7 天</th><th>弱點題型</th><th>墨漬怪</th><th>收服</th><th>最後上線</th></tr></thead>
    <tbody>{list.map(r=><tr key={r.id} className={open===r.id?'is-open':''} onClick={()=>setOpen(open===r.id?null:r.id)}>
     <td><b>{r.name}</b><small>{r.username}</small></td><td>{r.partner}<small>Lv.{r.level}</small></td><td>{r.answered}</td>

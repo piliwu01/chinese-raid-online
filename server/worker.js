@@ -4,11 +4,11 @@ import {validateBank} from '../src/question-bank.js';
 import {handleRaid,currentMembership} from './raid-api.js';
 import {handlePvp} from './pvp-api.js';
 import {activeActivity} from './activity.js';
-import {explain,studyCheck} from './ai.js';
+import {explain,studyCheck,classWeakAi} from './ai.js';
 import {studySummary} from '../shared/learning.js';
 import {categorize} from '../shared/play.js';
 import {handleTrade,tradeLog} from './trade.js';
-import {learningReport} from './report.js';
+import {learningReport,classWeakness} from './report.js';
 import {handleHero,pendingAwards,markClaimed} from './hero.js';
 import {pickBankId} from './banks.js';
 import {worldView,worldContext,hitStatement,pendingWorld,markWorldClaimed} from './world.js';
@@ -84,6 +84,8 @@ async function route(req,env){
  if(path==='/banks'&&req.method==='GET'){const {results}=await db.prepare('SELECT id,title,data FROM banks ORDER BY created_at').all();return json({banks:results.map(r=>({bankId:r.id,title:r.title,count:JSON.parse(r.data).questions.filter(q=>q.status==='active').length}))});}
  if(path.startsWith('/admin/')){
   if(user.role!=='teacher')fail('只有老師可以使用此功能。',403);
+  if(path==='/admin/class-weak'&&req.method==='POST')return json({overview:await classWeakness(env,String(body.className||'').trim().slice(0,40))});
+  if(path==='/admin/class-weak/ai'&&req.method==='POST'){const cls=String(body.className||'').trim().slice(0,40);return json(await classWeakAi(env,user,cls,await classWeakness(env,cls),{refresh:!!body.refresh}));}
   if(path==='/admin/report'&&req.method==='POST')return json({students:await learningReport(env,String(body.className||'').trim().slice(0,40))});
   if(path==='/admin/trades'&&req.method==='POST')return json({trades:await tradeLog(env,String(body.className||'').trim().slice(0,40))});
   if(path==='/admin/users'&&req.method==='GET'){const {results}=await db.prepare("SELECT id,username,display_name,class_name,must_change FROM users WHERE role='student' ORDER BY class_name,username").all();return json({users:results});}

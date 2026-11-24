@@ -139,3 +139,32 @@ export async function studyCheck(env,user,{studySummary,categorize},now=Date.now
  if(!result)throw aiError('AI 小老師這次沒有整理好，請稍後再試一次。',502);
  await cachePut(db,key,JSON.stringify(result));return {...result,cached:false,day};
 }
+
+// 2026-11-24 老師端「全班弱點總覽」AI 分析：依全班題型答對率與最多人答錯的題目，找出最需要重講的題型與課堂建議。
+// 每班每天 1 次（快取），老師可按「重新分析」覆蓋；只送統計數字與題目，不送學生姓名。
+export const CLASS_AI={minAnswered:30,minStudents:2};
+export function classWeakPrompt(ov,className){
+ const pct=x=>`${Math.round(x*100)}%`;
+ const lines=ov.cats.map(c=>`${c.category}：全班作答 ${c.total} 題，答對率 ${pct(c.rate)}，${c.struggling.length} 位學生答對率低於 6 成`).join('\n');
+ const wrong=ov.wrongs.map((w,i)=>`${i+1}. （${w.category||'未分類'}）${w.stem}　有 ${w.names.length} 位學生答錯還沒弄懂`).join('\n');
+ return [{role:'system',content:STYLE+'你要幫國中國文老師解讀全班在國文複習遊戲裡的弱點，給下一節課就能用的具體建議。只根據提供的數據與題目，不要編造數字，不要提到學生姓名。'},
+  {role:'user',content:`班級：${className||'全部班級'}，共 ${ov.students} 位學生（${ov.withData} 位有作答紀錄），總作答 ${ov.answered} 題。\n\n各題型答對率（低到高）：\n${lines}\n\n最多人答錯、還沒弄懂的題目：\n${wrong||'（沒有）'}\n\n請只輸出一段 JSON，不要有其他文字，格式：{"overall":"一到兩句說全班整體情況","focus":[{"category":"題型名稱（必須是上面出現過的題型）","why":"從錯題看出全班共通的錯誤觀念，一到兩句","reteach":"重講時要強調的重點，一到兩句","activity":"一個 10 分鐘內可做的課堂活動或提問方式"}]}。focus 最多 3 項，挑答對率最低、作答題數夠多、需要關心人數最多的題型。每個欄位不超過 70 字。`}];
+}
+export function parseClassWeak(text,cats){
+ const m=String(text||'').match(/\{[\s\S]*\}/);if(!m)return null;
+ try{const j=JSON.parse(m[0]),names=new Set(cats.map(c=>c.category)),seen=new Set();
+  const focus=(Array.isArray(j.focus)?j.focus:[]).filter(f=>f&&names.has(String(f.category))&&!seen.has(String(f.category))&&seen.add(String(f.category))).slice(0,3)
+   .map(f=>({category:String(f.category),why:cleanText(String(f.why||''),140),reteach:cleanText(String(f.reteach||''),140),activity:cleanText(String(f.activity||''),140)}));
+  const overall=cleanText(String(j.overall||''),160);
+  return overall||focus.length?{overall,focus}:null;
+ }catch{return null;}
+}
+export async function classWeakAi(env,user,className,overview,{refresh=false}={},now=Date.now()){
+ if(user.role!=='teacher')throw aiError('只有老師可以使用此功能。',403);
+ if(overview.answered<CLASS_AI.minAnswered||overview.withData<CLASS_AI.minStudents)throw aiError(`全班至少要有 ${CLASS_AI.minStudents} 位學生、共 ${CLASS_AI.minAnswered} 題作答紀錄，才能請 AI 分析。`,409);
+ const db=env.DB,day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Taipei'}).format(new Date(now)),key=`classweak:${className||'*'}:${day}`;
+ if(!refresh){const cached=await cacheGet(db,key);if(cached)return {...JSON.parse(cached),cached:true,day};}
+ const result=parseClassWeak(await chat(env,classWeakPrompt(overview,className),900,.4),overview.cats);
+ if(!result)throw aiError('AI 這次沒有整理好，請稍後再試一次。',502);
+ await cachePut(db,key,JSON.stringify(result));return {...result,cached:false,day};
+}
