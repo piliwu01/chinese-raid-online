@@ -973,3 +973,47 @@ body.battle-focus .fighter-status .status-chip{font-size:calc(12px * var(--bf,1)
 .sc-plan{margin:0;padding-left:22px;display:grid;gap:4px;font-size:15px;line-height:1.7}
 .sc-ai small{color:#aebbd0;font-size:12px}
 @media(max-width:760px){.study-check{grid-template-columns:minmax(0,1fr);padding:16px}.sc-cats li{grid-template-columns:4.5em 1fr 2.8em 3em;font-size:14px}.sc-stats b{font-size:19px}}
+/* 2026-11-23 天賦樹 */
+.talent-tree{margin-top:22px;padding:24px;border-radius:22px;border:1px solid var(--care-line,#34465b);background:linear-gradient(160deg,#1f2c3e,#1a2533);color:#eef3f9}
+.tt-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+.tt-head h2{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:24px}.tt-head h2 svg{color:#f6d46c}
+.tt-head p{margin:0;max-width:620px;color:#c3d0de;font-size:14px;line-height:1.7}
+.tt-points{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.tt-points>span{display:flex;align-items:baseline;gap:8px;font-size:14px;color:#c3d0de}
+.tt-points>span b{font:900 32px ui-monospace,monospace;color:#f6d46c}.tt-points>span small{font-size:12px;color:#9fb0c3}
+.tt-points>span.has-free b{animation:ttGlow 1.6s ease-in-out infinite}
+@keyframes ttGlow{50%{text-shadow:0 0 14px #f6d46c}}
+.tt-next{font-size:12px;color:#9fb0c3}
+.tt-points .secondary-button{display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 12px}
+.tt-msg{margin:12px 0 0;padding:10px 14px;border-radius:12px;background:#26443a;color:#d2f2e5;font-size:14px}
+.tt-branches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:18px}
+.tt-branch{border-radius:18px;padding:16px;background:#ffffff08;border:1px solid color-mix(in srgb,var(--tt-color) 40%,transparent)}
+.tt-branch h3{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:19px;color:var(--tt-color)}
+.tt-branch h3 small{margin-left:auto;font:700 13px ui-monospace,monospace;color:#c3d0de}
+.tt-branch ol{list-style:none;margin:0;padding:0;display:grid;gap:10px;position:relative}
+.tt-node{position:relative;padding:12px 14px;border-radius:14px;background:#14202e;border:1px solid #3a4c62;display:grid;gap:4px}
+.tt-node+.tt-node::before{content:'';position:absolute;left:24px;top:-11px;width:3px;height:10px;background:#3a4c62}
+.tt-node.is-some{border-color:color-mix(in srgb,var(--tt-color) 60%,transparent)}
+.tt-node.is-full{border-color:var(--tt-color);background:color-mix(in srgb,var(--tt-color) 12%,#14202e)}
+.tt-node.is-full+.tt-node::before{background:var(--tt-color)}
+.tt-node.is-locked{opacity:.6}
+.tt-node-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tt-node-top b{display:inline-flex;align-items:center;gap:5px;font-size:17px}
+.tt-pips{display:inline-flex;gap:4px}.tt-pips i{width:12px;height:12px;border-radius:50%;border:2px solid var(--tt-color);box-sizing:border-box}.tt-pips i.on{background:var(--tt-color)}
+.tt-node p{margin:0;font-size:14px;line-height:1.6;color:#dfe7f1}
+.tt-node small{font-size:12px;color:#9fb0c3}
+.tt-node button{justify-self:start;display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:6px 12px;border-radius:9px;border:1px solid var(--tt-color);background:color-mix(in srgb,var(--tt-color) 18%,transparent);color:#fff;font-size:13px;font-weight:700}
+.tt-node.is-full button,.tt-node.is-locked button{border-color:#4d6179;background:transparent;color:#9fb0c3}
+@media(max-width:900px){.tt-branches{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.talent-tree{padding:16px}.tt-points{align-items:flex-start}.tt-head h2{font-size:21px}}
+@media(prefers-reduced-motion:reduce){.tt-points>span.has-free b{animation:none}}
+/* 2026-11-24 未點天賦提醒 */
+nav button{position:relative}
+nav button i.nav-alert{position:absolute;top:2px;right:0;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff5d5d;color:#fff;font:700 11px/17px system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px #0f1623;animation:navAlertPulse 1.6s ease-in-out infinite}
+@keyframes navAlertPulse{50%{transform:scale(1.18)}}
+.talent-reminder{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,214,90,.5);background:linear-gradient(90deg,rgba(255,214,90,.16),rgba(255,214,90,.04));color:#fff3c4;font-weight:600}
+.talent-reminder svg{color:var(--yellow);flex:none}
+.talent-reminder span{flex:1 1 220px}
+.talent-reminder b{color:var(--yellow);font-size:1.15em}
+.talent-reminder button{display:inline-flex;align-items:center;gap:4px}
+@media (prefers-reduced-motion:reduce){nav button i.nav-alert{animation:none}}

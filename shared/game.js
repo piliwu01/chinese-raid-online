@@ -1,12 +1,13 @@
 export const ENEMY_HP=500;
 export const ENRAGE={at:0.5,mult:1.5};
 import {claimHero} from './hero.js';
+import {talentFx,learnTalent,resetTalents,damageBonus} from './talents.js';
 import {claimWorld,shareDamage} from './world-boss.js';
 import {rollEncounter,resolveEncounterAnswer,encounterDone,publicEncounter} from './encounter.js';
 import {pickBankQuestion} from './qpick.js';
 import {convertDupe} from './dupes.js';
 import {passiveFor,PASSIVE_RATE,PASSIVE_NUM} from './passives.js';
-import {noteCorrect,addChest,drawFortune,openChest,pullLantern,publicLucky,LUCKY} from './lucky.js';
+import {luckyOf,noteCorrect,addChest,drawFortune,openChest,pullLantern,publicLucky,LUCKY} from './lucky.js';
 import {effectiveness,CRIT_RATE,CRIT} from './typechart.js';
 import {taipeiDate} from './game-date.js';
 import {recordStudy,notePurified} from './learning.js';
@@ -57,7 +58,7 @@ export function applyAction(s,route,b,now,bank=null){
  }else if(route==='/shop/buy'){
   needPartner(s);const item=itemById(b.itemId);if(!item)fail('找不到這個道具。');if(s.food<item.price+1)fail(`需要 ${item.price} 份食物，並保留 1 份給夥伴餵食。`);const bag=bagOf(s);if(!Number.isSafeInteger(bag[item.id]+1))fail('背包數量已超出可保存範圍。');s.food-=item.price;bag[item.id]++;s.bag=bag;event.message=`已購買 1 個${item.name}，放入背包。`;
  }else if(route==='/bag/use'){
-  needPartner(s);if(b.itemId!=='potion')fail('請到共同討伐背包使用這個道具。');const bag=bagOf(s);if(!bag.potion)fail('背包沒有傷藥。');if(s.battle?.status!=='ready'||s.battle.playerHp<=0)fail('請在進行中的個人對戰使用傷藥。');const amount=Math.min(30,s.battle.playerMaxHp-s.battle.playerHp);if(amount<=0)fail('目前已滿血，不消耗傷藥。');s.battle.playerHp+=amount;bag.potion--;s.bag=bag;event.message=`已使用傷藥，回復 ${amount} HP。`;
+  needPartner(s);if(b.itemId!=='potion')fail('請到共同討伐背包使用這個道具。');const bag=bagOf(s);if(!bag.potion)fail('背包沒有傷藥。');if(s.battle?.status!=='ready'||s.battle.playerHp<=0)fail('請在進行中的個人對戰使用傷藥。');const amount=Math.min(30+talentFx(s).potion,s.battle.playerMaxHp-s.battle.playerHp);if(amount<=0)fail('目前已滿血，不消耗傷藥。');s.battle.playerHp+=amount;bag.potion--;s.bag=bag;event.message=`已使用傷藥，回復 ${amount} HP。`;
  }else if(route==='/feed'){
   needPartner(s);if(s.food<1)fail('先完成一輪 10 題，取得食物。');if(!s.roundDays.includes(today))fail('今天先完成一輪 10 題，再餵食夥伴。');if(s.fed.includes(today))fail('今天已完成陪伴，明天再來吧！');
   s.food--;s.bond++;s.fed.push(today);s.days.push(today);event.message='今天的陪伴已保存！親密度 ＋1。';
@@ -66,8 +67,8 @@ export function applyAction(s,route,b,now,bank=null){
   const selected=b.playerId===undefined?partnerFor(s.growth):ownedSpirit(s,b.playerId);if(!selected)fail('尚未成功收服這個角色，不能選擇出戰。',403);s.selected=selected;
   const chapter=b.chapter===undefined?(isUnlocked(s,s.chapter)?Number(s.chapter):1):Number(b.chapter);if(!chapterById(chapter))fail('沒有這個篇章。');if(!isUnlocked(s,chapter))fail('這個篇章還沒解鎖，先在前一章打倒或收服 3 隻神獸。',403);s.chapter=chapter;
   const picked=spiritRef(pickEnemy(chapter,now,selected.id)),enemy=Math.random()<SHINY_RATE?{...picked,shiny:true}:{...picked};const level=23+Math.floor(Math.random()*5);
-  const playerHp=b.heal||!s.battle||s.battle.status==='lost'?185:s.battle.playerHp;
-  const bgs=chapterById(chapter).bgs;s.battle={id:crypto.randomUUID(),enemy,level,maxHp:ENEMY_HP,hp:ENEMY_HP,playerMaxHp:185,playerHp,status:'ready',chapter,scene:bgs[Math.floor(Math.random()*bgs.length)]};startBreak(s.battle,bank);s.pending=null;if(s.studyFocus?.left>0)applyFocus(s.battle,s.studyFocus);
+  const tfx=talentFx(s),maxHp=185+tfx.hp;const playerHp=b.heal||!s.battle||s.battle.status==='lost'?maxHp:Math.min(maxHp,s.battle.playerHp);
+  const bgs=chapterById(chapter).bgs;s.battle={id:crypto.randomUUID(),enemy,level,maxHp:ENEMY_HP,hp:ENEMY_HP,playerMaxHp:maxHp,playerHp,status:'ready',chapter,scene:bgs[Math.floor(Math.random()*bgs.length)]};startBreak(s.battle,bank);if(tfx.revealAll&&Array.isArray(s.battle.weak))s.battle.revealed=[...s.battle.weak];if(tfx.orbs)s.battle.orbs+=tfx.orbs;s.pending=null;if(s.studyFocus?.left>0)applyFocus(s.battle,s.studyFocus);
   const enc=rollEncounter(s,today);if(enc)event.encounter=enc.kind;
  }else if(route==='/question'){
   needPartner(s);if(!ownedSpirit(s,s.selected?.id))fail('這個角色尚未收服，請重新選擇自己的夥伴。',403);if(!s.battle||s.battle.status!=='ready')fail('請重新開始一場對戰。');
@@ -78,11 +79,11 @@ export function applyAction(s,route,b,now,bank=null){
   s.pending={...questionFor(bankForCard(bank,card),move==='quick'||move==='catch'?'easy':move==='critical'?'hard':'medium',now,s),move,boost,awaken,cardCategory:card?.category||null,battleId:s.battle.id};event.question=publicQuestion(s.pending);
  }else if(route==='/answer'){
   if(!ownedSpirit(s,s.selected?.id))fail('這個角色尚未收服，請重新選擇自己的夥伴。',403);const q=s.pending;if(!q||q.id!==b.questionId||q.battleId!==s.battle?.id)fail('這題已結束，請重新取得題目。',409);
-  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;
+  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;{const tf=talentFx(s),extra=tf.xp&&result.reward.gained>0?Math.round(result.reward.gained*tf.xp):0;if(extra){s.growth={...s.growth,xp:Math.min(MAX_XP,s.growth.xp+extra)};event.reward={...event.reward,gained:event.reward.gained+extra,talentXp:extra,after:levelFor(s.growth.xp)};}}
   if(result.reward.complete){s.food++;if(!s.roundDays.includes(today))s.roundDays.push(today);if(addChest(s,'round'))event.chest='完成一輪 10 題';}
   if(event.correct&&noteCorrect(s,today))event.jade=true;
-  const battle=s.battle;ensureBreak(battle,null);const brk=q.move==='catch'?afterCatch(battle):resolveBreak(battle,{correct:event.correct,boost:q.boost||0,category:q.category||null});event.break=brk;let damage=0,caught=false;const hpBefore=battle.hp;const passive=passiveFor(s.selected?.id);const burnBefore=battle.burn||0;const roll=()=>Math.random()<PASSIVE_RATE;
-  if(event.correct){bumpQuest(s,'correct10',today);if(q.move==='catch'){caught=canCapture(battle.hp,battle.maxHp)&&Math.random()<0.92;}else{s.combo=(s.combo||0)+1;const mult=comboMultiplier(s.combo),eff=effectiveness(s.selected?.type,battle.enemy?.type),crit=Math.random()<CRIT_RATE;damage=Math.round((({quick:22,special:45,critical:75}[q.move])+Math.floor(Math.random()*({quick:10,special:18,critical:22}[q.move])))*mult*eff.mult*(crit?CRIT:1)*(brk.mult||1)*(q.awaken?LATENT.mult:1));event.effect=eff.kind;event.crit=crit;battle.hp=Math.max(0,battle.hp-damage);if(s.combo>=5)bumpQuest(s,'combo5',today);
+  const battle=s.battle;const tfx=talentFx(s);ensureBreak(battle,null);const brk=q.move==='catch'?afterCatch(battle):resolveBreak(battle,{correct:event.correct,boost:q.boost||0,category:q.category||null});event.break=brk;let damage=0,caught=false;const hpBefore=battle.hp;const passive=passiveFor(s.selected?.id);const burnBefore=battle.burn||0;const roll=()=>Math.random()<PASSIVE_RATE;
+  if(event.correct){bumpQuest(s,'correct10',today);if(q.move==='catch'){caught=canCapture(battle.hp,battle.maxHp)&&Math.random()<0.92;}else{s.combo=(s.combo||0)+1;const mult=comboMultiplier(s.combo),eff=effectiveness(s.selected?.type,battle.enemy?.type),crit=Math.random()<CRIT_RATE+tfx.crit;damage=Math.round((({quick:22,special:45,critical:75}[q.move])+Math.floor(Math.random()*({quick:10,special:18,critical:22}[q.move])))*mult*eff.mult*(crit?CRIT:1)*(brk.mult||1)*(brk.wasBroken?tfx.breakMult/2:1)*damageBonus(tfx,s.combo)*(q.awaken?LATENT.mult:1));event.effect=eff.kind;event.crit=crit;battle.hp=Math.max(0,battle.hp-damage);if(s.combo>=5)bumpQuest(s,'combo5',today);
    if(passive?.id==='kui'&&battle.hp>0&&roll()){const extra=Math.min(battle.hp,Math.round(damage*PASSIVE_NUM.kuiExtra[passive.stage]));battle.hp-=extra;damage+=extra;event.passive={...passive,value:extra,text:`追加雷擊 ${extra} 點傷害`};}
    else if(passive?.id==='bifang'&&battle.hp>0&&roll()){battle.burn=PASSIVE_NUM.burnTurns;battle.burnDamage=PASSIVE_NUM.burnDamage[passive.stage];event.passive={...passive,value:battle.burnDamage,text:`${battle.enemy.zhName||'對手'}陷入灼燒，接下來 3 回合每回合扣 ${battle.burnDamage} HP`};}}
   if(passive?.id==='dangkang'&&battle.playerHp<battle.playerMaxHp&&roll()){const healed=Math.min(PASSIVE_NUM.heal[passive.stage],battle.playerMaxHp-battle.playerHp);battle.playerHp+=healed;event.passive={...passive,value:healed,text:`回復 ${healed} HP`};}
@@ -93,10 +94,10 @@ export function applyAction(s,route,b,now,bank=null){
   if(caught){battle.status='caught';{const u=recordChapterWin(s,battle.chapter);if(u)event.unlocked={id:u.id,name:u.name,place:u.place};}bumpQuest(s,'capture1',today);const had=s.captured.find(p=>p.id===battle.enemy.id);if(!had)s.captured.push(battle.enemy);else{if(battle.enemy.shiny&&!had.shiny)had.shiny=true;event.dupe=addDupe(s,battle.enemy.id);}}
   else if(battle.hp===0){battle.status='won';bumpQuest(s,'win3',today);{const u=recordChapterWin(s,battle.chapter);if(u)event.unlocked={id:u.id,name:u.name,place:u.place};}}
   const enraged=battle.hp>0&&battle.hp<=battle.maxHp*ENRAGE.at;if(enraged){event.enraged=true;if(hpBefore>battle.maxHp*ENRAGE.at)event.enrageStart=true;}
-  let enemyDamage=battle.status==='ready'&&!event.correct&&!brk.noCounter&&!q.awaken?Math.round((18+Math.floor(Math.random()*16))*(enraged?ENRAGE.mult:1)):0;
+  let enemyDamage=battle.status==='ready'&&!event.correct&&!brk.noCounter&&!q.awaken?Math.round((18+Math.floor(Math.random()*16))*(enraged?ENRAGE.mult:1)*(1-tfx.counterCut)):0;
   if(enemyDamage>0&&battle.shell>0){battle.shell--;event.blocked={value:enemyDamage,left:battle.shell};enemyDamage=0;}
-  battle.playerHp=Math.max(0,battle.playerHp-enemyDamage);if(battle.playerHp===0)battle.status='lost';
-  if(q.move!=='catch'||enemyDamage>0){const g=(enemyDamage>0?gainLatent(battle,LATENT.hurt):0)+(brk.breakNow?gainLatent(battle,LATENT.break):0);event.latent={value:battle.latent||0,gained:g,full:(battle.latent||0)>=LATENT.max};}
+  if(tfx.stand&&!battle.stood&&enemyDamage>0&&enemyDamage>=battle.playerHp){enemyDamage=Math.max(0,battle.playerHp-1);battle.stood=true;event.stand=true;}battle.playerHp=Math.max(0,battle.playerHp-enemyDamage);if(battle.playerHp===0)battle.status='lost';
+  if(q.move!=='catch'||enemyDamage>0){const g=(enemyDamage>0?gainLatent(battle,Math.round(LATENT.hurt*(1+tfx.latent))):0)+(brk.breakNow?gainLatent(battle,Math.round(LATENT.break*(1+tfx.latent))):0);event.latent={value:battle.latent||0,gained:g,full:(battle.latent||0)>=LATENT.max};}
   if(q.awaken)event.awaken=true;
   if(q.move!=='catch'&&s.studyFocus?.left>0){s.studyFocus.left--;event.focusLeft=s.studyFocus.left;if(!s.studyFocus.left){s.studyFocus=null;battle.focus=null;}}
   // 本週山海魔王：冒險傷害的 50% 同時打到魔王（week、weak、hpLeft 由伺服器注入）。
@@ -129,7 +130,7 @@ export function applyAction(s,route,b,now,bank=null){
  }else if(route==='/ink/answer'){
   const q=s.inkFight;if(!q||q.id!==b.questionId)fail('這題已結束，請重新挑戰。',409);event=resolve(q,b.choice,now);s.inkFight=null;recordStudy(s,q.category,event.correct,now);
   const m=(s.inkNest||[]).find(x=>x.id===q.inkId);
-  if(event.correct){s.inkNest=(s.inkNest||[]).filter(x=>x.id!==q.inkId);s.food+=INK.food;s.growth={...s.growth,xp:Math.min(MAX_XP,s.growth.xp+INK.xp)};bumpQuest(s,'ink1',today);notePurified(s,now);if((s.study?.purified||0)%LUCKY.inkPerChest===0&&addChest(s,'ink'))event.chest=`淨化 ${LUCKY.inkPerChest} 隻墨漬怪`;if(noteCorrect(s,today))event.jade=true;event.message=`淨化成功！獲得 ${INK.food} 份食物、${INK.xp} XP。`+(event.chest?`另外獲得答題寶箱（${event.chest}）！`:'')+(event.jade?'還得到 1 枚玉符！':'');}
+  if(event.correct){const k=talentFx(s).purify;s.inkNest=(s.inkNest||[]).filter(x=>x.id!==q.inkId);s.food+=INK.food*k;s.growth={...s.growth,xp:Math.min(MAX_XP,s.growth.xp+INK.xp*k)};bumpQuest(s,'ink1',today);notePurified(s,now);if((s.study?.purified||0)%LUCKY.inkPerChest===0&&addChest(s,'ink'))event.chest=`淨化 ${LUCKY.inkPerChest} 隻墨漬怪`;if(noteCorrect(s,today))event.jade=true;event.message=`淨化成功！獲得 ${INK.food*k} 份食物、${INK.xp*k} XP。`+(event.chest?`另外獲得答題寶箱（${event.chest}）！`:'')+(event.jade?'還得到 1 枚玉符！':'');}
   else{if(m)m.day=today;event.message='墨漬怪還沒被淨化，看完解析，明天再挑戰一次！';}
  }else if(route==='/quest/claim'){
   needPartner(s);const qs=questState(s,today),id=String(b.questId),def=QUESTS[id];if(!def||!qs.ids.includes(id))fail('今天沒有這個任務。',404);if(qs.claimed[id])fail('這個任務的獎勵已領取。');if((qs.progress[id]||0)<def.need)fail('任務還沒完成喔！');
@@ -142,6 +143,10 @@ export function applyAction(s,route,b,now,bank=null){
   event=pullLantern(s,now);
  }else if(route==='/dupe/convert'){
   const r=convertDupe(s,b.id,b.to);event.convert=r;event.message=`${r.zhName} 副本卡已轉化為 ${r.label} ×${r.amount}${r.rare?'（稀有加倍）':''}。`;
+ }else if(route==='/talent/learn'){
+  needPartner(s);const r=learnTalent(s,b.id);event.message=`學會天賦「${r.name}」${r.rank>1?`（${r.rank} 級）`:''}！`;event.talent=r;
+ }else if(route==='/talent/reset'){
+  const n=resetTalents(s,luckyOf(s));event.message=`天賦已重置，退回 ${n} 點天賦（花了 1 枚玉符）。`;
  }else if(route==='/world/claim'){
   const got=claimWorld(s,b.awards);if(!got.length)fail('目前沒有可領取的山海魔王獎勵。');event.awards=got;
   event.message=got.map(r=>r.won?`山海魔王打倒了！寶箱 ${r.chest}、玉符 ${r.jade}、食物 ${r.food}${r.title?`，獲得稱號「${r.title}」`:''}`:`山海魔王參加獎：食物 ${r.food}`).join('；');
@@ -150,7 +155,7 @@ export function applyAction(s,route,b,now,bank=null){
   if(!(e.q&&e.q.expires>=now))e.q={...questionFor(bank,'medium',now,s),difficulty:'medium'};event.question=publicQuestion(e.q);
  }else if(route==='/encounter/answer'){
   const e=s.encounter,q=e?.q;if(!e||e.done||!q||q.id!==b.questionId)fail('這題已結束，請重新開始奇遇。',409);
-  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;
+  event=resolve(q,b.choice,now);recordStudy(s,q.bankId==='math-auto'?'':q.category,event.correct,now);const result=recordAnswer(s.growth,q.bankId,q,event.correct);s.growth=result.state;event.reward=result.reward;{const tf=talentFx(s),extra=tf.xp&&result.reward.gained>0?Math.round(result.reward.gained*tf.xp):0;if(extra){s.growth={...s.growth,xp:Math.min(MAX_XP,s.growth.xp+extra)};event.reward={...event.reward,gained:event.reward.gained+extra,talentXp:extra,after:levelFor(s.growth.xp)};}}
   if(event.correct){if(noteCorrect(s,today))event.jade=true;bumpQuest(s,'correct10',today);}else addInk(s,q.bankId,q.questionId,q.question,today);
   event.encounter=resolveEncounterAnswer(s,event.correct,result.reward?.gained||0);
  }else if(route==='/encounter/skip'){

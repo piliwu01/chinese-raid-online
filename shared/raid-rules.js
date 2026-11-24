@@ -1,5 +1,6 @@
 import {comboMultiplier,CLASS_COMBO,classComboNeed} from './play.js';
 import {initSkills,advanceSkills,interruptSkill,wardAbsorb,skillActive,shiftSkills,BOSS_SKILL} from './raid-skills.js';
+import {damageBonus} from './talents.js';
 export const DIFF_DAMAGE={easy:8,medium:10,hard:20};
 // 魔王第二階段：血量降到一半時變身，反擊間隔由 40 秒縮短為 28 秒，並每 45 秒輪替一種弱點題型（傷害 ×2）。
 export const PHASE2={attackEvery:28000,weakEvery:45000,damageMult:1.5};
@@ -87,7 +88,7 @@ export function recordHit(s,m,correct,now,difficulty,category=''){
  {const bs=s.bossShield;if(bs&&category&&bs.weak.includes(category)&&Array.isArray(bs.revealed)&&!bs.revealed.includes(category)){bs.revealed.push(category);addEvent(s,'reveal',`${m.name}找出魔王的另一個破盾題型：${category}！`,now,{actorId:m.id,category});}}
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
  const warded=skillActive(s,'ward');settleBreak(s,now);const broken=breakActive(s,now);
- const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult:1)*comboMultiplier(m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
+ const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult*(m.talent?.breakMult||2)/2:1)*comboMultiplier(m.combo)*damageBonus(m.talent,m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
  if(warded){const left=s.skill.wardLeft-1;addEvent(s,'ward-hit',`${m.name}擊中墨甲！還需答對 ${Math.max(0,left)} 題`,now,{actorId:m.id});wardAbsorb(s,now,1,addEvent,()=>stunBoss(s,now));}
  else {const bs=s.bossShield,shieldHit=!broken&&!!bs&&!!category&&bs.weak.includes(category);if(shieldHit)bs.left=Math.max(0,bs.left-1);
  const tags=`${broken?'破盾加倍！':''}${isWeak?'弱點命中！':''}${difficulty==='hard'?'難題命中！':''}${m.combo>=3?`${m.combo} 連擊！`:''}`;
@@ -114,6 +115,6 @@ export function useSkill(s,m,kind,now){
  if(s.status!=='active')raidError('討伐未進行中。',409);if(m.charges<1)raidError('技能能量不足。');
  if(kind==='strong'&&skillActive(s,'ward')){m.charges--;addEvent(s,'ward-hit',`${m.name}的強力攻擊重擊墨甲！`,now,{actorId:m.id});wardAbsorb(s,now,3,addEvent,()=>stunBoss(s,now));}
  else if(kind==='strong'){const damage=Math.min(RAID.strong,s.hp);s.hp-=damage;m.damage+=damage;m.charges--;addEvent(s,'strong',`${m.name}發動強力攻擊！造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage});m.damageOrder=s.sequence;checkPhase(s,now);if(s.hp===0)finishRoom(s,'won',now);}
- else if(kind==='heal'){const healed=Math.min(RAID.heal,s.maxShield-s.shield);if(!healed)raidError('護盾已滿，不消耗技能。');s.shield+=healed;m.heal+=healed;m.charges--;addEvent(s,'heal',`${m.name}修復 ${healed} 點全班護盾`,now,{actorId:m.id,value:healed});m.healOrder=s.sequence;}
+ else if(kind==='heal'){const healed=Math.min(RAID.heal+(m.talent?.raidHeal||0),s.maxShield-s.shield);if(!healed)raidError('護盾已滿，不消耗技能。');s.shield+=healed;m.heal+=healed;m.charges--;addEvent(s,'heal',`${m.name}修復 ${healed} 點全班護盾`,now,{actorId:m.id,value:healed});m.healOrder=s.sequence;}
  else raidError('技能無效。');
 }

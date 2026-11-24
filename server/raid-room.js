@@ -5,7 +5,7 @@ import {categorize,weaknessPool} from '../shared/play.js';import {visibleWeak} f
 import {generateMathProblem} from '../shared/questions.js';import {publicQuestion} from '../shared/game.js';import {settleRaidAward} from './raid-awards.js';import {sha} from './auth.js';
 import {consumeRaidItem} from './inventory.js';
 import {taunt,summarizeStats,analyze,AI_LIMIT} from './ai.js';
-import {partnerFor} from '../src/growth.js';
+import {partnerFor} from '../src/growth.js';import {talentFx} from '../shared/talents.js';
 import {ownedSpirit} from '../shared/ownership.js';
 function recordStat(s,q,correct){if(!q.questionId)return;s.stats||={};const v=s.stats[q.questionId]||(Object.keys(s.stats).length<400?(s.stats[q.questionId]={stem:String(q.question||'').slice(0,70),category:q.category||'',right:0,wrong:0}):null);if(v)v[correct?'right':'wrong']++;}
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -15,7 +15,7 @@ export class RaidRoom extends DurableObject{
  async choosePartner(actor,id){
   const row=await this.env.DB.prepare('SELECT data FROM progress WHERE user_id=?').bind(actor.id).first(),state=JSON.parse(row.data),fixed=partnerFor(state.growth);if(!fixed)raidError('先到養成頁選擇專屬夥伴。');
   const partner=id===undefined?fixed:ownedSpirit(state,id);if(!partner)raidError('只能選擇自己的固定夥伴或已收服角色。',403);
-  return {partner,nickname:partner.id===fixed.id?state.nickname:'',title:state.title||''};
+  return {partner,nickname:partner.id===fixed.id?state.nickname:'',title:state.title||'',talent:talentFx(state)};
  }
  async recoverItem(){
   const intent=await this.ctx.storage.get('itemIntent');if(!intent)return null;
