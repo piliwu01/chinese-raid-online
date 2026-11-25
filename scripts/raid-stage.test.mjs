@@ -22,7 +22,7 @@ test('60-player burst retains every actor event and fixed nonoverlapping formati
  startRoom(state,1000);state.comboCooldownUntil=Infinity;const cursor=collectStageEvents(null,{...state,serverNow:1000}).cursor;
  for(const m of Object.values(state.members))recordHit(state,m,true,1010);
  const fresh=collectStageEvents(cursor,{...state,serverNow:1020});assert.equal(fresh.events.length,60);assert.equal(new Set(fresh.events.map(e=>e.actorId)).size,60);assert.equal(state.hp,17400);
- const original=formation(Object.values(state.members)),slots=new Set(original.map(p=>`${p.x},${p.y}`));assert.equal(slots.size,60);assert(original.every(p=>p.x>=49&&p.x<=95&&p.y>=30&&p.y<=77));
+ const original=formation(Object.values(state.members)),slots=new Set(original.map(p=>`${p.x},${p.y}`));assert.equal(slots.size,60);assert(original.every(p=>p.x>=49&&p.x<=95&&p.y>=30&&p.y<=68));
  state.members.s0.damage=1000;assert.deepEqual(formation(Object.values(state.members)).map(p=>[p.id,p.x,p.y]),original.map(p=>[p.id,p.x,p.y]));
  for(let i=0;i<400;i++)addEvent(state,'join','fixture',1020);assert.equal(state.events.length,RAID_EVENT_BUFFER);
 });

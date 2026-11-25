@@ -403,3 +403,38 @@
 @keyframes bhfText{0%{opacity:0;transform:scale(1.4)}15%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
 @media(prefers-reduced-motion:reduce){.boss-charge-warn{animation:none}.bhf-edge,.bhf-text{animation-duration:.9s}}
 .boss-charge-warn{top:auto;bottom:18px}
+
+/* ===== 2026-11-25 老師投影畫面：上方資訊壓扁成細條，空間讓給魔王場景 ===== */
+.raid-board .raid-vitals:not(.is-compact){padding:8px 24px;gap:22px;align-items:center}
+.raid-board .raid-vitals:not(.is-compact)>div{display:grid;grid-template-columns:auto auto minmax(40px,1fr);align-items:center;column-gap:10px}
+.raid-board .raid-vitals:not(.is-compact) b{font-size:21px;margin:0}
+.raid-board .raid-vitals:not(.is-compact) small{font-size:11px}
+.raid-board .raid-vitals:not(.is-compact)>div>span{font-size:12px;white-space:nowrap}
+.raid-board .raid-vitals:not(.is-compact) .raid-meter{margin:0;height:6px}
+.raid-board .raid-vitals:not(.is-compact) .vital-clock,.raid-board .raid-vitals:not(.is-compact) .vital-strike{padding-left:18px}
+.raid-board .action-timeline:not(.is-compact){padding:2px 24px;gap:12px}
+.raid-board .action-timeline:not(.is-compact) .tl-now,.raid-board .action-timeline:not(.is-compact) .tl-end{font-size:13px}
+.raid-board .action-timeline:not(.is-compact) .tl-track{height:56px;margin:0;background:linear-gradient(#0000 26px,#ffffff26 26px,#ffffff26 30px,#0000 30px)}
+.raid-board .action-timeline:not(.is-compact) .tl-track::before{top:18px;height:20px}
+.raid-board .action-timeline:not(.is-compact) .tl-item i{top:20px;width:16px;height:16px;left:-8px}
+.raid-board .action-timeline:not(.is-compact) .tl-item span{font-size:12px}
+.raid-board .action-timeline:not(.is-compact) .tl-item span b{font-size:14px}
+.raid-board .action-timeline:not(.is-compact) .tl-item.row-0 span{top:auto;bottom:38px}
+.raid-board .action-timeline:not(.is-compact) .tl-item.row-1 span{bottom:auto;top:38px}
+.raid-board .class-combo:not(.is-compact){flex-wrap:nowrap;margin:6px 0;padding:5px 14px;gap:10px;border-radius:10px}
+.raid-board .class-combo:not(.is-compact) .cc-track i{height:9px}
+.raid-board .class-combo:not(.is-compact) b{font-size:15px}
+.raid-board .class-combo:not(.is-compact) small{width:auto;flex:none;font-size:11px;white-space:nowrap}
+.raid-board .raid-arena{aspect-ratio:16/9;min-height:560px}
+.raid-board .stage-boss{width:42%;height:80%;left:3%;top:14%}
+.raid-board .stage-boss>img{height:86%}
+:is(.raid-board:fullscreen,.projector-mode .raid-board) .raid-arena{aspect-ratio:auto;min-height:300px}
+:is(.raid-board:fullscreen,.projector-mode .raid-board) .stage-boss>img{max-height:none}
+@media(max-width:900px){.raid-board .raid-vitals:not(.is-compact)>div{grid-template-columns:auto auto;row-gap:4px}.raid-board .raid-vitals:not(.is-compact) .raid-meter{grid-column:1/-1}.raid-board .class-combo:not(.is-compact) small{display:none}}
+@media(max-width:600px){.raid-board .raid-vitals:not(.is-compact)>div{display:block}.raid-board .raid-vitals:not(.is-compact) b{margin-top:4px}.raid-board .raid-vitals:not(.is-compact) .raid-meter{margin-top:6px}.raid-board .raid-arena{aspect-ratio:auto;min-height:420px}.raid-board .stage-boss{width:44%;left:0}.raid-board .raid-vitals:not(.is-compact) .vital-clock,.raid-board .raid-vitals:not(.is-compact) .vital-strike{padding-left:0}}
+/* 魔王與最下排學生讓出底部「魔王護盾」條的高度，名字不再被蓋住 */
+.raid-board .stage-boss{top:11%;height:auto;bottom:calc(30px + 4.4cqw)}
+.raid-board .stage-boss>img{height:auto;flex:1;min-height:0}
+@media(max-width:600px){.raid-board .stage-boss{bottom:58px}}
+.raid-board .raid-arena.is-short .formation-title{top:7%;padding-bottom:6px}
+.raid-board .raid-arena.is-dense .unit-partner{display:none}.raid-board .raid-arena.is-dense .unit-name{line-height:1.25}

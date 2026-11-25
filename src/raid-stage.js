@@ -12,7 +12,7 @@ export function collectStageEvents(cursor,room){
 }
 export function formation(members){
  const columns=Math.min(10,Math.max(3,Math.ceil(Math.sqrt(members.length*1.6)))),rows=Math.max(1,Math.ceil(members.length/columns));
- return members.map((member,i)=>({...member,x:49+(i%columns)*46/Math.max(1,columns-1),y:rows===1?55:30+Math.floor(i/columns)*47/Math.max(1,rows-1)}));
+ return members.map((member,i)=>({...member,x:49+(i%columns)*46/Math.max(1,columns-1),y:rows===1?50:30+Math.floor(i/columns)*38/Math.max(1,rows-1)}));
 }
 export function effectLabel(e){
  if(e.type==='hit')return `${e.weak?'弱點 ':''}−${e.value}${e.combo>=3?` 🔥${e.combo}`:''}`;
