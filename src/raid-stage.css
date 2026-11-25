@@ -438,3 +438,5 @@
 @media(max-width:600px){.raid-board .stage-boss{bottom:58px}}
 .raid-board .raid-arena.is-short .formation-title{top:7%;padding-bottom:6px}
 .raid-board .raid-arena.is-dense .unit-partner{display:none}.raid-board .raid-arena.is-dense .unit-name{line-height:1.25}
+/* 「我們的隊伍」標題疊在場景背景圖上方，並加深色底，花俏背景上也讀得清楚 */
+.raid-arena .formation-title{z-index:3;padding:6px 12px;border-radius:8px;border-bottom:0;background:linear-gradient(90deg,#0b1424d9,#0b142499 70%,#0b142400);text-shadow:0 1px 3px #000}
