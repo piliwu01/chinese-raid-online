@@ -35,11 +35,11 @@ export default function WorldBossApp({ user, onExit }) {
         {onExit && <button className="secondary-button" onClick={onExit}><Home size={16} /> 回到主畫面</button>}
       </header>
       {teacher && <ClassPick classes={classes} cls={cls} setCls={setCls} />}
-      {view.lastWeek && <p className={`world-last ${view.lastWeek.won ? 'is-won' : ''}`}>上週 {view.lastWeek.boss}：{view.lastWeek.won ? '🎉 全班打倒了！' : `差一點，打掉 ${view.lastWeek.total.toLocaleString()} / ${view.lastWeek.maxHp.toLocaleString()}`}</p>}
+      {view.lastWeek && <p className={`world-last ${view.lastWeek.won ? 'is-won' : ''}`}>{view.lastWeek.sameWeek ? '本週上一隻' : '上週'} {view.lastWeek.boss}：{view.lastWeek.won ? '🎉 全班打倒了！' : `差一點，打掉 ${view.lastWeek.total.toLocaleString()} / ${view.lastWeek.maxHp.toLocaleString()}`}</p>}
       <section className={`world-boss ${view.defeated ? 'is-defeated' : ''}`}>
         <div className="wb-portrait"><img src={`/world/${view.boss.id}.webp`} alt={`山海魔王${view.boss.name}`} onError={e => { e.currentTarget.src = '/assets/boss.png'; }} /></div>
         <div className="wb-info">
-          <div className="wb-title"><h2>{view.className} 班・本週山海魔王：{view.boss.name}</h2><span className="wb-clock"><Clock size={16} />{open ? left(ends) : '本週已結算，下週一再來'}</span></div>
+          <div className="wb-title"><h2>{view.className} 班・本週山海魔王：{view.boss.name}{view.round > 1 ? `（第 ${view.round} 隻）` : ''}</h2><span className="wb-clock"><Clock size={16} />{open ? left(ends) : '本週已結算，下週一再來'}</span></div>
           <p className="wb-line">{view.defeated ? `${view.boss.name}被打倒了！週日 22:00 結算時發獎勵。` : view.boss.line}</p>
           <div className="wb-hp"><span>全班共同血量</span><b>{view.hp.toLocaleString()} <small>/ {view.maxHp.toLocaleString()}</small></b></div>
           <div className="wb-bar" role="progressbar" aria-label="山海魔王剩餘血量" aria-valuemin={0} aria-valuemax={view.maxHp} aria-valuenow={view.hp}><i style={{ width: `${pct}%` }} /></div>

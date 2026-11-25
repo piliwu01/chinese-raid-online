@@ -1,5 +1,5 @@
 // 本週山海魔王 API：每班每週一隻、全班傷害累積、週日 22:00 後冪等結算、領獎。
-import {WORLD,worldWeek,worldWindow,bossFor,worldMaxHp,pickWeak,settleWorld} from '../shared/world-boss.js';
+import {WORLD,worldWeek,worldWindow,bossFor,worldMaxHp,pickWeak,settleWorld,roundOf,roundKey} from '../shared/world-boss.js';
 import {weaknessPool} from '../shared/play.js';
 const err=(message,status=400)=>{throw Object.assign(Error(message),{status});};
 const DEFAULT_BANK='chinese-115-review-v1';
@@ -10,12 +10,29 @@ async function weakPool(db){
  return row?weaknessPool(JSON.parse(row.data)):[];
 }
 // 取得（必要時建立）本週這班的山海魔王。血量以第一次出現時的班級人數計算。
+// 同一週有好幾隻時（提前結算後重開），回傳還沒結算的那隻；全部結算了就回傳最後一隻（settled=true，不再累積傷害）。
 export async function ensureBoss(db,className,week,now=Date.now()){
- let row=await db.prepare('SELECT * FROM world_bosses WHERE week=? AND class_name=?').bind(week,className).first();
- if(row)return row;
+ const {results}=await db.prepare("SELECT b.*,s.week settled FROM world_bosses b LEFT JOIN world_settled s ON s.week=b.week AND s.class_name=b.class_name WHERE b.class_name=? AND (b.week=? OR b.week LIKE ?)").bind(className,week,week+'#%').all();
+ const rows=results.sort((x,y)=>roundOf(x.week)-roundOf(y.week)),open=rows.find(r=>!r.settled);
+ if(open)return {...open,settled:false};
+ if(rows.length)return {...rows.at(-1),settled:true};
  const max=worldMaxHp(await studentCount(db,className)),boss=bossFor(week).id,weak=pickWeak(await weakPool(db),week,className);
  await db.prepare('INSERT OR IGNORE INTO world_bosses(week,class_name,max_hp,boss,weak,created_at) VALUES(?,?,?,?,?,?)').bind(week,className,max,boss,weak,now).run();
- return db.prepare('SELECT * FROM world_bosses WHERE week=? AND class_name=?').bind(week,className).first();
+ return {...await db.prepare('SELECT * FROM world_bosses WHERE week=? AND class_name=?').bind(week,className).first(),settled:false};
+}
+// 老師提前結算目前這隻並重開下一隻（同一週）：照週日結算的規則發獎，新的一隻血量由老師指定。
+export async function restartRound(db,className,maxHp,now=Date.now()){
+ const week=worldWeek(now),cur=await ensureBoss(db,className,week,now);if(now>=worldWindow(week).end)err('本週已結算，下週一會自動出現新的山海魔王。',409);
+ const stmts=cur.settled?[]:await settleStatements(db,className,cur,now),next=roundKey(week,roundOf(cur.week)+1),hp=Math.max(1,Math.round(Number(maxHp)||worldMaxHp(await studentCount(db,className))));
+ stmts.push(db.prepare('INSERT OR IGNORE INTO world_bosses(week,class_name,max_hp,boss,weak,created_at) VALUES(?,?,?,?,?,?)').bind(next,className,hp,bossFor(next).id,pickWeak(await weakPool(db),next,className),now));
+ await db.batch(stmts);return {settled:cur.week,next,maxHp:hp};
+}
+async function settleStatements(db,className,b,now){
+ const {results:hits}=await db.prepare('SELECT user_id,damage,correct,updated_at FROM world_hits WHERE week=? AND class_name=?').bind(b.week,className).all();
+ const r=settleWorld(b.max_hp,hits.map(h=>({userId:h.user_id,damage:h.damage,correct:h.correct,at:h.updated_at})));
+ const stmts=r.awards.map(a=>db.prepare('INSERT OR IGNORE INTO world_awards(week,class_name,user_id,won,top,damage,correct,claimed,created_at) VALUES(?,?,?,?,?,?,?,0,?)').bind(b.week,className,a.userId,a.won?1:0,a.top?1:0,a.damage,a.correct,now));
+ stmts.push(db.prepare('INSERT OR IGNORE INTO world_settled(week,class_name,won,total,created_at) VALUES(?,?,?,?,?)').bind(b.week,className,r.won?1:0,r.total,now));
+ return stmts;
 }
 export async function totalDamage(db,className,week){return (await db.prepare('SELECT COALESCE(SUM(damage),0) t FROM world_hits WHERE week=? AND class_name=?').bind(week,className).first())?.t||0;}
 
@@ -24,11 +41,7 @@ export async function settleClass(db,className,now=Date.now()){
  const {results}=await db.prepare('SELECT b.week,b.max_hp FROM world_bosses b LEFT JOIN world_settled s ON s.week=b.week AND s.class_name=b.class_name WHERE b.class_name=? AND s.week IS NULL').bind(className).all();
  for(const b of results){
   if(now<worldWindow(b.week).end)continue;
-  const {results:hits}=await db.prepare('SELECT user_id,damage,correct,updated_at FROM world_hits WHERE week=? AND class_name=?').bind(b.week,className).all();
-  const r=settleWorld(b.max_hp,hits.map(h=>({userId:h.user_id,damage:h.damage,correct:h.correct,at:h.updated_at})));
-  const stmts=r.awards.map(a=>db.prepare('INSERT OR IGNORE INTO world_awards(week,class_name,user_id,won,top,damage,correct,claimed,created_at) VALUES(?,?,?,?,?,?,?,0,?)').bind(b.week,className,a.userId,a.won?1:0,a.top?1:0,a.damage,a.correct,now));
-  stmts.push(db.prepare('INSERT OR IGNORE INTO world_settled(week,class_name,won,total,created_at) VALUES(?,?,?,?,?)').bind(b.week,className,r.won?1:0,r.total,now));
-  await db.batch(stmts);
+  await db.batch(await settleStatements(db,className,b,now));
  }
 }
 export async function pendingWorld(db,user,now=Date.now()){
@@ -44,8 +57,9 @@ export async function markWorldClaimed(db,user,awards){
 export async function worldContext(db,user,now=Date.now()){
  if(user.role!=='student')err('山海魔王由學生出手，老師可以查看進度。',403);if(!user.class_name)err('還沒有班級，請找老師設定。',403);
  const week=worldWeek(now);if(now>=worldWindow(week).end)err('本週山海魔王已在週日 22:00 結算，下週一 00:00 再來挑戰！',409);
- const boss=await ensureBoss(db,user.class_name,week,now),total=await totalDamage(db,user.class_name,week);
- return {week,boss,hpLeft:Math.max(0,boss.max_hp-total)};
+ const boss=await ensureBoss(db,user.class_name,week,now);if(boss.settled)err('這隻山海魔王已結算，等老師開下一隻。',409);
+ const total=await totalDamage(db,user.class_name,boss.week);
+ return {week:boss.week,boss,hpLeft:Math.max(0,boss.max_hp-total)};
 }
 export function hitStatement(db,user,week,event,now=Date.now()){
  return db.prepare('INSERT INTO world_hits(week,class_name,user_id,damage,correct,answered,updated_at) VALUES(?,?,?,?,?,1,?) ON CONFLICT(week,user_id) DO UPDATE SET damage=damage+excluded.damage,correct=correct+excluded.correct,answered=answered+1,updated_at=excluded.updated_at')
@@ -57,13 +71,13 @@ export async function worldView(env,user,body={},now=Date.now()){
  const db=env.DB,className=user.role==='teacher'?String(body.className||user.class_name||''):user.class_name;
  if(!className)err(user.role==='teacher'?'請先選擇班級。':'還沒有班級，請找老師設定。',400);
  await settleClass(db,className,now);
- const week=worldWeek(now),win=worldWindow(week),open=now<win.end,boss=await ensureBoss(db,className,week,now),total=await totalDamage(db,className,week);
+ const win=worldWindow(worldWeek(now)),boss=await ensureBoss(db,className,worldWeek(now),now),week=boss.week,open=now<win.end&&!boss.settled,total=await totalDamage(db,className,week);
  const {results:rows}=await db.prepare("SELECT h.user_id,u.display_name name,h.damage,h.correct,h.answered FROM world_hits h JOIN users u ON u.id=h.user_id WHERE h.week=? AND h.class_name=? ORDER BY h.damage DESC,h.updated_at ASC").bind(week,className).all();
  const hitters=rows.filter(r=>r.damage>0),list=[...hitters,...(user.role==='teacher'?rows.filter(r=>r.damage<=0):[])].map((r,i)=>({rank:r.damage>0?i+1:null,id:r.user_id,name:r.name,damage:r.damage,correct:r.correct,answered:r.answered,me:r.user_id===user.id})),mine=rows.find(r=>r.user_id===user.id);
  const meRow=mine?{damage:mine.damage,correct:mine.correct,rank:mine.damage>0?hitters.findIndex(r=>r.user_id===user.id)+1:null}:null,info=WORLD.bosses.find(b=>b.id===boss.boss)||bossFor(week);
- const last=await db.prepare('SELECT s.week,s.won,s.total,b.max_hp,b.boss FROM world_settled s JOIN world_bosses b ON b.week=s.week AND b.class_name=s.class_name WHERE s.class_name=? ORDER BY s.week DESC LIMIT 1').bind(className).first();
+ const last=await db.prepare('SELECT s.week,s.won,s.total,b.max_hp,b.boss FROM world_settled s JOIN world_bosses b ON b.week=s.week AND b.class_name=s.class_name WHERE s.class_name=? AND s.week<>? ORDER BY s.created_at DESC LIMIT 1').bind(className,week).first();
  return {className,week,open,startsAt:win.start,endsAt:win.end,serverNow:now,boss:{id:info.id,name:info.name,line:info.line},maxHp:boss.max_hp,damage:Math.min(total,boss.max_hp),hp:Math.max(0,boss.max_hp-total),defeated:total>=boss.max_hp,weak:boss.weak,
   participants:rows.filter(r=>r.correct>0).length,classSize:await studentCount(db,className),me:meRow||{damage:0,correct:0,rank:null},
   top:user.role==='teacher'?list:list.slice(0,5),rules:{rewardMin:WORLD.rewardMin,share:WORLD.share,weakMult:WORLD.weakMult,win:WORLD.win,lose:WORLD.lose,top:WORLD.top,title:WORLD.title},
-  lastWeek:last?{week:last.week,won:!!last.won,total:last.total,maxHp:last.max_hp,boss:(WORLD.bosses.find(b=>b.id===last.boss)||{}).name||''}:null};
+  round:roundOf(week),lastWeek:last?{week:last.week,sameWeek:last.week.split('#')[0]===week.split('#')[0],won:!!last.won,total:last.total,maxHp:last.max_hp,boss:(WORLD.bosses.find(b=>b.id===last.boss)||{}).name||''}:null};
 }

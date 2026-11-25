@@ -1,13 +1,13 @@
 // 本週山海魔王（2026-11-23）：每班每週一隻，全班在家各自答題，傷害累積到共同血條。純函式，前後端共用。
 // - 開放：週一 00:00 ～ 週日 22:00（台北時間），週日 22:00 結算。
 // - 2026-11-23 改版：不另外答題。學生在「冒險」個人對戰打到野生神獸的傷害，有 50% 同時打到本週山海魔王（本週弱點題型再 ×2）。
-// - 血量：班上學生人數 × 500（2026-11-23 由 300 調高）；答錯不扣分；不設每日上限。
+// - 血量：班上學生人數 × 2300（2026-11-23 由 300 調高到 500；2026-11-25 老師反映一節課就被打倒，再調高到 2300，29 人約 66,700）；答錯不扣分；不設每日上限。
 // - 獎勵：本週答對至少 20 題才能領。打倒：寶箱 1、玉符 1、食物 3，貢獻前 3 名加「山海魔王勇者」稱號；沒打倒：食物 2。
 import {weekStart} from './hero.js';
 import {luckyOf,addChest} from './lucky.js';
 
 export const WORLD = {
-  hpPerStudent: 500, rewardMin: 20, top: 3, title: '山海魔王勇者',
+  hpPerStudent: 2300, rewardMin: 20, top: 3, title: '山海魔王勇者',
   share: 0.5, weakMult: 2,
   win: { chest: 1, jade: 1, food: 3 }, lose: { food: 2 },
   firstWeek: '2026-11-23',
@@ -21,13 +21,18 @@ export const WORLD = {
 const DAY = 86400000, HOUR = 3600000;
 
 export const worldWeek = (now = Date.now()) => weekStart(now);
+// 2026-11-25：同一週可以有好幾隻（老師提前結算後重開新局）。第 1 隻的代號就是週次，之後是「週次#2」「週次#3」…
+export const baseWeek = key => String(key || '').split('#')[0];
+export const roundOf = key => Math.max(1, Number(String(key || '').split('#')[1]) || 1);
+export const roundKey = (week, round) => (round > 1 ? `${week}#${round}` : week);
 export function worldWindow(week) {
-  const start = Date.parse(week + 'T00:00:00+08:00');
+  const start = Date.parse(baseWeek(week) + 'T00:00:00+08:00');
   return { start, end: start + 6 * DAY + 22 * HOUR };
 }
 export const worldOpen = (now = Date.now()) => now < worldWindow(worldWeek(now)).end;
+// 同一週的第 2、3 隻依序換下一種神獸。
 export function bossFor(week) {
-  const n = Math.round((Date.parse(week + 'T00:00:00+08:00') - Date.parse(WORLD.firstWeek + 'T00:00:00+08:00')) / (7 * DAY));
+  const n = Math.round((Date.parse(baseWeek(week) + 'T00:00:00+08:00') - Date.parse(WORLD.firstWeek + 'T00:00:00+08:00')) / (7 * DAY)) + roundOf(week) - 1;
   return WORLD.bosses[((n % 4) + 4) % 4];
 }
 export const worldMaxHp = students => Math.max(1, students) * WORLD.hpPerStudent;

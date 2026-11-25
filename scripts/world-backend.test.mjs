@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
 import {build} from 'esbuild';import {Miniflare,convertV4MiniflareOptions} from 'miniflare';
 import {hashPassword} from '../server/auth.js';import {freshState,applyAction} from '../shared/game.js';
-import {worldWeek} from '../shared/world-boss.js';
+import {worldWeek,bossFor} from '../shared/world-boss.js';import {restartRound} from '../server/world.js';
 const right=q=>Object.keys(q?.optionTexts||{}).find(k=>q.optionTexts[k]==='正確')||'A';
 
 test('world boss integration: class-wide damage, teacher view, idempotent settlement and claim',async t=>{
@@ -16,12 +16,12 @@ test('world boss integration: class-wide damage, teacher view, idempotent settle
   async function call(path,body,cookie=''){const r=await mf.dispatchFetch('http://localhost/api'+path,{method:'POST',headers:{cookie,'X-QuizSpirit':'1',Origin:'http://localhost','Content-Type':'application/json'},body:JSON.stringify(body||{})});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
   const login=async id=>(await call('/login',{username:id,password:pw})).cookie;const [t1,s1,s2,x1]=await Promise.all(['t1','s1','s2','x1'].map(login));
   const week=worldWeek();
-  await t.test('boss HP = class size × 500; adventure damage is shared at 50% (x2 on weak) and replays count once',async()=>{
-   const v=await call('/world/view',{},s1);assert.equal(v.status,200);assert.equal(v.data.maxHp,1500);assert.equal(v.data.hp,1500);assert.ok(['成語','修辭'].includes(v.data.weak));assert.equal(v.data.rules.share,0.5);
+  await t.test('boss HP = class size × 2300; adventure damage is shared at 50% (x2 on weak) and replays count once',async()=>{
+   const v=await call('/world/view',{},s1);assert.equal(v.status,200);assert.equal(v.data.maxHp,6900);assert.equal(v.data.hp,6900);assert.ok(['成語','修辭'].includes(v.data.weak));assert.equal(v.data.rules.share,0.5);
    await call('/battle/start',{chapter:1,heal:true,bankId:bank.bankId,requestId:crypto.randomUUID()},s1);
    const q=(await call('/question',{move:'critical',bankId:bank.bankId,requestId:crypto.randomUUID()},s1)).data.event.question;
    const body={questionId:q.id,choice:right(q),bankId:bank.bankId,requestId:crypto.randomUUID()};const a=await call('/answer',body,s1);assert.equal(a.status,200);
-   const e=a.data.event,dmg=e.world.damage;assert.equal(dmg,Math.min(1500,Math.max(1,Math.round(e.combat.damage*0.5*(e.world.weak?2:1)))));
+   const e=a.data.event,dmg=e.world.damage;assert.equal(dmg,Math.min(6900,Math.max(1,Math.round(e.combat.damage*0.5*(e.world.weak?2:1)))));
    const again=await call('/answer',body,s1);assert.equal(again.data.replayed,true);
    const v2=await call('/world/view',{},s2);assert.equal(v2.data.damage,dmg,'重送不重複計傷害，同班看得到');assert.equal(v2.data.participants,1);
    const other=await call('/world/view',{},x1);assert.equal(other.data.damage,0,'別班看不到');
@@ -42,6 +42,20 @@ test('world boss integration: class-wide damage, teacher view, idempotent settle
    const c=await call('/world/claim',{requestId:crypto.randomUUID()},s1);assert.equal(c.status,200);assert.ok(c.data.state.titles.includes('山海魔王勇者'));
    assert.equal((await call('/world/claim',{requestId:crypto.randomUUID()},s1)).status,400,'不能重複領');
    const v=await call('/world/view',{},s2);assert.equal(v.data.lastWeek.week,past);assert.equal(v.data.lastWeek.won,true);
+  });
+  await t.test('teacher settles early and restarts: awards go out now, a second boss with custom HP takes new damage',async()=>{
+   await db.prepare('UPDATE world_hits SET correct=25 WHERE week=? AND user_id=?').bind(week,'s1').run();
+   const r=await restartRound(db,'313',67000);assert.equal(r.settled,week);assert.equal(r.next,week+'#2');
+   const v=await call('/world/view',{},s1);assert.equal(v.data.maxHp,67000);assert.equal(v.data.hp,67000);assert.equal(v.data.round,2);assert.equal(v.data.boss.id,bossFor(week+'#2').id);assert.notEqual(v.data.boss.id,bossFor(week).id,'換一種神獸');
+   assert.equal(v.data.lastWeek.week,week);assert.equal(v.data.lastWeek.sameWeek,true);assert.equal(v.data.open,true);
+   const p=await call('/world/pending',{},s1);assert.deepEqual(p.data.awards.map(a=>a.week),[week],'第一隻的獎勵立刻可以領');
+   const c=await call('/world/claim',{requestId:crypto.randomUUID()},s1);assert.equal(c.status,200);assert.match(c.data.event.message,/食物 2/);
+   await call('/battle/start',{chapter:1,heal:true,bankId:bank.bankId,requestId:crypto.randomUUID()},s2);
+   const q=(await call('/question',{move:'critical',bankId:bank.bankId,requestId:crypto.randomUUID()},s2)).data.event.question;
+   const a=await call('/answer',{questionId:q.id,choice:right(q),bankId:bank.bankId,requestId:crypto.randomUUID()},s2);assert.equal(a.data.event.world.week,week+'#2');
+   const v2=await call('/world/view',{},s2);assert.equal(v2.data.damage,a.data.event.world.damage,'傷害打到第二隻');assert.equal(v2.data.participants,1);
+   const old=await db.prepare('SELECT COALESCE(SUM(damage),0) t FROM world_hits WHERE week=?').bind(week).first();assert.equal(v.data.lastWeek.total,old.t,'第一隻的傷害不變');
+   assert.equal((await restartRound(db,'313',500)).next,week+'#3');
   });
  }finally{await mf.dispose();}
 });

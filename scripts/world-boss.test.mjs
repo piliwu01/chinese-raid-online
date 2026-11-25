@@ -8,7 +8,7 @@ test('the window runs Monday 00:00 to Sunday 22:00 Taipei; bosses rotate every w
  const w=worldWindow('2026-11-23');assert.equal(w.end,at('2026-11-29T22:00:00+08:00'));
  assert.equal(worldOpen(at('2026-11-29T21:59:00+08:00')),true);assert.equal(worldOpen(at('2026-11-29T22:00:00+08:00')),false);assert.equal(worldOpen(at('2026-11-30T00:00:00+08:00')),true);
  assert.deepEqual(['2026-11-23','2026-11-30','2026-12-07','2026-12-14','2026-12-21'].map(w=>bossFor(w).id),['taotie','qiongqi','taowu','hundun','taotie']);
- assert.equal(worldMaxHp(30),15000);assert.equal(worldMaxHp(0),500);
+ assert.equal(worldMaxHp(30),69000);assert.equal(worldMaxHp(29),66700);assert.equal(worldMaxHp(0),2300);
 });
 test('weak category is fixed per class and week; adventure damage is shared at 50%, weak doubles it',()=>{
  const pool=['成語','修辭','對聯'];assert.equal(pickWeak(pool,'2026-11-23','313'),pickWeak(pool,'2026-11-23','313'));assert.equal(pickWeak([],'w','c'),null);
