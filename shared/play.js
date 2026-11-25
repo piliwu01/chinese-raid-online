@@ -30,7 +30,7 @@ export function weaknessPool(bank, minCount = 10) {
 // ---------- 連擊 ----------
 // 連續答對 3 題起加成：3 連擊 ×1.1、4 連擊 ×1.2 … 8 連擊以上 ×1.6。
 export const comboMultiplier = combo => combo >= 3 ? 1 + Math.min(combo, 8) * 0.1 - 0.2 : 1;
-export const CLASS_COMBO = { window: 10000, max: 15, min: 3, cooldown: 15000, stun: 10000, share: 0.12 };
+export const CLASS_COMBO = { window: 10000, max: 15, min: 3, cooldown: 60000, stun: 5000, share: 0.03 };
 // 全班連擊門檻：15 題；人數少於 15 人的班級改為「人數」題（至少 3 題），避免小班永遠觸發不了。
 export const classComboNeed = members => Math.max(CLASS_COMBO.min, Math.min(CLASS_COMBO.max, members));
 

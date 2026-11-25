@@ -1,7 +1,7 @@
 // Presentation only: no HP, rewards or room state is calculated here.
 export const EFFECT_LIFETIME=1900;
 export const RECENT_EVENT_WINDOW=5000;
-export const visualTypes=new Set(['hit','strong','heal','fire','energy','stun','poison','guard','drum','boss','ultimate','phase']);
+export const visualTypes=new Set(['hit','strong','heal','fire','energy','stun','stun-miss','poison','guard','drum','boss','ultimate','phase']);
 export function roomIdentity(room){return `${room.code}:${room.createdAt}`;}
 export function collectStageEvents(cursor,room){
  const identity=roomIdentity(room),sequence=Number(room.sequence)||0;
@@ -33,5 +33,5 @@ export function effectLabel(e){
  if(e.type==='heal')return `護盾 ＋${e.value}`;
  if(e.type==='boss')return e.text;
  if(e.type==='poison'&&Number.isFinite(e.value))return `毒傷 −${e.value}`;
- return {energy:'能量 ＋1',stun:'暈眩 10 秒',poison:'毒霧施放',guard:'守護結晶',drum:'團隊戰鼓'}[e.type]||'';
+ return {energy:'能量 ＋1',stun:'暈眩 10 秒','stun-miss':'暈眩彈落空',poison:'毒霧施放',guard:'守護結晶',drum:'團隊戰鼓'}[e.type]||'';
 }

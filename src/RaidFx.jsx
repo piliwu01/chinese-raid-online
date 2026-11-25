@@ -97,8 +97,8 @@ const TL_SPAN = 60000;
 export function ActionTimeline({ room, now, compact = false }) {
   if (!['active', 'paused'].includes(room.status)) return null;
   const items = [], add = (at, kind, text) => { if (at && at > now && at - now <= TL_SPAN) items.push({ at, kind, text }); };
-  const every = room.phase === 2 ? 28000 : 40000;
-  if (room.nextAttackAt) { add(room.nextAttackAt, 'attack', '魔王反擊'); add(room.nextAttackAt + every, 'attack', '魔王反擊'); }
+  // 反擊間隔會隨機快慢、偶爾追擊（2026-11-25），所以只顯示已排定的下一次。
+  if (room.nextAttackAt) add(room.nextAttackAt, 'attack', '魔王反擊');
   const sk = room.skill || {};
   if (sk.stage === 'warn') add(sk.until, 'skill', `發動：${BOSS_SKILLS[sk.id]?.name || '技能'}`);
   else if (sk.stage === 'active') add(sk.until, 'end', `${BOSS_SKILLS[sk.id]?.name || '技能'}結束`);

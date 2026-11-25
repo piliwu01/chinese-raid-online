@@ -72,12 +72,12 @@ test('raid combo multiplies damage and resets on a miss',()=>{
  recordHit(s,m,false,now,'medium');assert.equal(m.combo,0);
 });
 
-test('class combo: threshold scales to class size, fires one ultimate (12% HP + 10s stun) then cools down',()=>{
+test('class combo: threshold scales to class size, fires one ultimate (3% HP + 5s stun) then cools down',()=>{
  assert.equal(classComboNeed(2),3);assert.equal(classComboNeed(8),8);assert.equal(classComboNeed(28),15);
  const s=room(28,2000),list=Object.values(s.members);
  for(let i=0;i<14;i++)recordHit(s,list[i],true,now+i*500,'medium');assert.equal(classComboStatus(s,now+7000).count,14);assert(!s.events.some(e=>e.type==='ultimate'));
- const attack=s.nextAttackAt;recordHit(s,list[14],true,now+7100,'medium');const ult=s.events.find(e=>e.type==='ultimate');assert(ult);assert.equal(ult.value,240);
- assert(s.stunUntil>=now+7100+10000);assert.equal(s.nextAttackAt,attack+10000);assert.equal(classComboStatus(s,now+7200).count,0);
+ const attack=s.nextAttackAt;recordHit(s,list[14],true,now+7100,'medium');const ult=s.events.find(e=>e.type==='ultimate');assert(ult);assert.equal(ult.value,60);
+ assert(s.stunUntil>=now+7100+5000);assert.equal(s.nextAttackAt,attack+5000);assert.equal(classComboStatus(s,now+7200).count,0);
  for(let i=15;i<28;i++)recordHit(s,list[i],true,now+7200,'medium');assert.equal(s.events.filter(e=>e.type==='ultimate').length,1);
  const slow=room(28,100000),ms=Object.values(slow.members);for(let i=0;i<20;i++)recordHit(slow,ms[i],true,now+i*1000,'medium');assert(!slow.events.some(e=>e.type==='ultimate'));
 });

@@ -28,7 +28,7 @@ export function ClassCombo({room,now,compact=false}){
   <span className="cc-label">{cooling?'合體技冷卻中':'全班連擊'}</span>
   <div className="cc-track">{Array.from({length:c.need},(_,i)=><i key={i} className={i<count?'on':''}/>)}</div>
   <b>{cooling?`${Math.ceil((c.cooldownUntil-now)/1000)}s`:`${count} / ${c.need}`}</b>
-  {!compact&&!cooling&&<small>10 秒內全班答對 {c.need} 題，發動合體大招！</small>}
+  {!compact&&!cooling&&<small>10 秒內全班答對 {c.need} 題，發動合體大招！（答錯會扣 1 格）</small>}
  </div>;
 }
 export function WeakBanner({room,now,compact=false}){
@@ -111,7 +111,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
      <div className="fx-impact">{Array.from({length:8},(_,i)=><s key={i} style={{'--a':`${i*45}deg`}}/>)}</div>
      {e.hard&&<div className="fx-crit"><small>難題命中！</small><strong>−{e.value}</strong></div>}
     </div>;})}
-    {ultimate&&<div key={ultimate.key} className="fx-ultimate">{positions.map(m=>{const fx=fxFor(m.partner?.type);return <div key={m.id} className={`fx-shot fx-${fx.kind==='bolt'?'orb':fx.kind} is-strong`} style={{'--x0':`${m.x}%`,'--y0':`${m.y-5}%`,'--fx':fx.color,'--fx-glow':fx.glow}}><i style={{animationDelay:`${(m.joinOrder||0)%6*40}ms`}}><b/></i></div>;})}<div className="ult-flash"/><div className="ult-burst"/><div className="ult-text"><small>全班合體技！</small><strong>−{ultimate.value}</strong><span>魔王暈眩 10 秒</span></div></div>}
+    {ultimate&&<div key={ultimate.key} className="fx-ultimate">{positions.map(m=>{const fx=fxFor(m.partner?.type);return <div key={m.id} className={`fx-shot fx-${fx.kind==='bolt'?'orb':fx.kind} is-strong`} style={{'--x0':`${m.x}%`,'--y0':`${m.y-5}%`,'--fx':fx.color,'--fx-glow':fx.glow}}><i style={{animationDelay:`${(m.joinOrder||0)%6*40}ms`}}><b/></i></div>;})}<div className="ult-flash"/><div className="ult-burst"/><div className="ult-text"><small>全班合體技！</small><strong>−{ultimate.value}</strong><span>魔王暈眩 5 秒</span></div></div>}
     {phaseFx&&<div key={phaseFx.key} className="phase-announce"><small>PHASE 2</small><strong>墨卷魔神暴走了！</strong><span>攻擊力 ×1.5 · 反擊加快{phaseFx.weak?` · 弱點：${phaseFx.weak}題 傷害 ×2`:''}</span></div>}
     {counter&&<div key={'o'+counter.key} className="fx-inkorbs">{positions.map((m,i)=><i key={m.id} style={{'--x1':`${m.x}%`,'--y1':`${m.y-4}%`,animationDelay:`${(i%12)*70}ms`}}><b/></i>)}</div>}
     {counter&&<div key={counter.key} className="fx-ink">{INK.map((b,i)=><i key={i} style={{left:`${b[0]}%`,top:`${b[1]}%`,'--s':b[2],animationDelay:`${b[3]}ms`}}/>)}<div className="fx-vignette"/></div>}
