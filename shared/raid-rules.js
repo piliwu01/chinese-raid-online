@@ -55,6 +55,9 @@ export const WRONG={lock:5000};
 export const STUN_ITEM={chance:.4,ms:10000};
 // 魔王反擊節奏（2026-11-25）：間隔 25 秒（暴走 18 秒），每次隨機快或慢 5 秒；20% 機會 3 秒後追擊第二下（追擊後不會再連續追擊）。
 export const BOSS_RHYTHM={jitter:5000,followChance:.2,followGap:3000};
+// 攻擊道具（火焰瓶、毒霧瓶，2026-11-25）：每答對 3 題才能丟 1 瓶（可累積），丟完任一瓶要等 30 秒才能再丟攻擊道具。
+export const BOTTLE={need:3,cooldown:30000,ids:['fire','poison']};
+export function bottleStatus(m,now){const progress=m.bottleProgress||0,wait=Math.max(0,(m.bottleReadyAt||0)-now);return {progress,need:BOTTLE.need,ready:Math.floor(progress/BOTTLE.need),readyAt:m.bottleReadyAt||0,wait};}
 export const hitDamage=d=>DIFF_DAMAGE[d]??RAID.hit;
 export const RAID={duration:600000,shield:100,attackEvery:25000,bossDamage:10,hit:10,strong:30,heal:10,energyEvery:5,maxCharges:2,maxPlayers:60,hpPerPlayer:300};
 export const live=status=>['waiting','active','paused'].includes(status);
@@ -87,10 +90,10 @@ export function advanceRoom(s,now,random=Math.random){
 }
 export function startRoom(s,now){if(s.status!=='waiting')raidError('房間已開始或結束。',409);const n=Object.keys(s.members).length;if(!n)raidError('至少要有 1 位學生加入。');s.status='active';s.maxHp=s.hp=s.customHp||n*RAID.hpPerPlayer;s.endsAt=now+s.duration;s.nextAttackAt=now+RAID.attackEvery;initSkills(s,now);initBreak(s);addEvent(s,'start',`${n} 位冒險者集結，討伐開始！`,now);}
 export function pauseRoom(s,now){advanceRoom(s,now);if(s.status!=='active')raidError('目前無法暫停。',409);s.status='paused';s.pausedAt=now;addEvent(s,'pause','老師暫停了討伐，計時與題目一起休息。',now);}
-export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前沒有暫停。',409);const delay=now-s.pausedAt;s.endsAt+=delay;s.nextAttackAt+=delay;if(s.poisonNextAt)s.poisonNextAt+=delay;for(const field of ['stunUntil','drumUntil','comboCooldownUntil'])if(s[field]>s.pausedAt)s[field]+=delay;if(s.weakStart)s.weakStart+=delay;if(s.bossShield?.until>s.pausedAt)s.bossShield.until+=delay;if(s.comboHits)s.comboHits=s.comboHits.map(t=>t+delay);shiftSkills(s,delay,s.pausedAt);for(const m of Object.values(s.members)){if(m.question)m.question.expires+=delay;if(m.lockUntil>s.pausedAt)m.lockUntil+=delay;}s.status='active';s.pausedAt=null;addEvent(s,'resume','大家準備好了，繼續討伐！',now);}
+export function resumeRoom(s,now){if(s.status!=='paused')raidError('房間目前沒有暫停。',409);const delay=now-s.pausedAt;s.endsAt+=delay;s.nextAttackAt+=delay;if(s.poisonNextAt)s.poisonNextAt+=delay;for(const field of ['stunUntil','drumUntil','comboCooldownUntil'])if(s[field]>s.pausedAt)s[field]+=delay;if(s.weakStart)s.weakStart+=delay;if(s.bossShield?.until>s.pausedAt)s.bossShield.until+=delay;if(s.comboHits)s.comboHits=s.comboHits.map(t=>t+delay);shiftSkills(s,delay,s.pausedAt);for(const m of Object.values(s.members)){if(m.question)m.question.expires+=delay;if(m.lockUntil>s.pausedAt)m.lockUntil+=delay;if(m.bottleReadyAt>s.pausedAt)m.bottleReadyAt+=delay;}s.status='active';s.pausedAt=null;addEvent(s,'resume','大家準備好了，繼續討伐！',now);}
 export function recordHit(s,m,correct,now,difficulty,category='',timedOut=false){
  m.answered++;const dk=['easy','medium','hard'].includes(difficulty)?difficulty:'medium';m.diff=m.diff||{};m.diff[dk]=m.diff[dk]||[0,0];m.diff[dk][1]++;if(correct)m.diff[dk][0]++;
- if(!correct){m.combo=0;if(!timedOut){m.lockUntil=now+WRONG.lock;if(m.energy>0)m.energy--;if(s.comboHits?.length)s.comboHits=s.comboHits.slice(0,-1);}if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
+ if(!correct){m.combo=0;if(!timedOut){m.lockUntil=now+WRONG.lock;if(m.energy>0)m.energy--;if(s.comboHits?.length)s.comboHits=s.comboHits.slice(0,-1);}if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.bottleProgress=(m.bottleProgress||0)+1;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
  {const bs=s.bossShield;if(bs&&category&&bs.weak.includes(category)&&Array.isArray(bs.revealed)&&!bs.revealed.includes(category)){bs.revealed.push(category);addEvent(s,'reveal',`${m.name}找出魔王的另一個破盾題型：${category}！`,now,{actorId:m.id,category});}}
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
  const warded=skillActive(s,'ward'),mark=markMult(s,m.id);settleBreak(s,now);const broken=breakActive(s,now);
@@ -108,6 +111,7 @@ export function recordHit(s,m,correct,now,difficulty,category='',timedOut=false)
 export function useRaidItem(s,m,id,now,random=Math.random){
  if(s.status!=='active')raidError('請在進行中的討伐使用道具。',409);
  if(sealed(s))raidError('封印咒發動中，暫時不能使用道具，先專心答題！',409);
+ if(BOTTLE.ids.includes(id)){const b=bottleStatus(m,now);if(b.wait>0)raidError(`攻擊道具冷卻中，${Math.ceil(b.wait/1000)} 秒後才能再丟。`,409);if(b.ready<1)raidError(`還要再答對 ${BOTTLE.need-b.progress%BOTTLE.need} 題才能丟攻擊道具（每答對 ${BOTTLE.need} 題可丟 1 瓶）。`,409);m.bottleProgress-=BOTTLE.need;m.bottleReadyAt=now+BOTTLE.cooldown;}
  let message;
  if(id==='shield'){const amount=Math.min(10,s.maxShield-s.shield);if(amount<=0)raidError('護盾已滿，不消耗補給包。');s.shield+=amount;m.heal+=amount;addEvent(s,'heal',`${m.name}使用補給包，修復 ${amount} 點護盾`,now,{actorId:m.id,value:amount});m.healOrder=s.sequence;return {message:`已回復 ${amount} 點全班護盾。`};}
  if(id==='fire'&&skillActive(s,'ward')){addEvent(s,'ward-hit',`${m.name}的火焰瓶燒向墨甲！`,now,{actorId:m.id});wardAbsorb(s,now,3,addEvent,()=>stunBoss(s,now));return {message:'火焰瓶削弱了墨甲。'};}
