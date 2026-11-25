@@ -12,7 +12,7 @@
   - `raid-rules.js`＋`raid-skills.js`：討伐規則與魔王干擾技能（設定在 `BOSS_SKILL`）。
   - `world-boss.js`＋`server/world.js`：本週山海魔王（每班每週一隻，週日 22:00 結算，資料表 `migrations/0009_world_boss.sql`）。
   - `passives.js`（初始夥伴被動）、`qpick.js`（抽題不重複）、`hero.js`（英雄榜）、`lucky.js`（山海籤）、`dupes.js`（重複卡轉化）、`trade.js`（卡牌交易）。
-- 一次性：`operations` 表（requestId 防重送）；多筆原子更新：`state_guards`。
+- 一次性：`operations` 表（requestId 防重送）；多筆原子更新：在 `UPDATE progress` 後接 `staleGuard(db)`（`server/guard.js`，版本不符就讓整批回滾，不寫入；`state_guards` 表已不再使用）。D1 是免費方案，每天約 10 萬筆寫入上限（台北 08:00 重置），新增寫入時要省著用。
 - 角色圖：存在 D1 `art_images`，由 `/assets/<id>.png` 提供，Worker 快取 1 小時。音樂 `public/music`，遊戲說明圖 `public/guide/1~8.webp`、山海魔王圖 `public/world/<id>.webp`。
 - 資料表定義：`migrations/`。**deploy.bat 不會自動套用 migration**，新增資料表要另外對正式 D1 執行 `CREATE TABLE IF NOT EXISTS ...`，並把 SQL 存進 `migrations/`。
 

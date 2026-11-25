@@ -1,4 +1,4 @@
-import {freshState,publicState,applyAction,fail} from '../shared/game.js';
+import {staleGuard} from './guard.js';import {freshState,publicState,applyAction,fail} from '../shared/game.js';
 import {hashPassword,checkPassword,validatePassword,newSession,getUser,visibleUser,sha,cookie,randomToken,tempPassword} from './auth.js';
 import {validateBank} from '../src/question-bank.js';
 import {handleRaid,currentMembership} from './raid-api.js';
@@ -25,13 +25,12 @@ async function mutate(db,user,route,body,bank,opts={}){
  for(let retry=0;retry<5;retry++){
   const previous=await db.prepare('SELECT route,result FROM operations WHERE user_id=? AND request_id=?').bind(user.id,requestId).first();
   if(previous){if(previous.route!==fingerprint)fail('操作識別重複，內容不一致。',409);return {state:publicState(JSON.parse((await stateOf(db,user.id)).data)),event:JSON.parse(previous.result),replayed:true};}
-  const row=await stateOf(db,user.id),state=JSON.parse(row.data);const event=applyAction(state,route,route==="/fortune/draw"?{...body,userKey:user.id}:{...body,...(opts.inject||{})},Date.now(),bank);const guard=crypto.randomUUID();
+  const row=await stateOf(db,user.id),state=JSON.parse(row.data);const event=applyAction(state,route,route==="/fortune/draw"?{...body,userKey:user.id}:{...body,...(opts.inject||{})},Date.now(),bank);
   try{await db.batch([
    db.prepare('UPDATE progress SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(state),user.id,row.version),
-   db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(guard),
+   staleGuard(db),
    ...(opts.extra?opts.extra(event):[]),
-   db.prepare('INSERT INTO operations(user_id,request_id,route,result,created_at) VALUES(?,?,?,?,?)').bind(user.id,requestId,fingerprint,JSON.stringify(event),Date.now()),
-   db.prepare('DELETE FROM state_guards WHERE id=?').bind(guard)
+   db.prepare('INSERT INTO operations(user_id,request_id,route,result,created_at) VALUES(?,?,?,?,?)').bind(user.id,requestId,fingerprint,JSON.stringify(event),Date.now())
   ]);return {state:publicState(state),event};}catch(e){if(retry===4)throw Object.assign(Error('有另一台裝置正在更新，請重新載入後再試。'),{status:409});}
  }
 }

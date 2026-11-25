@@ -1,4 +1,4 @@
-import {recordAnswer} from '../src/growth.js';import {addInk,bumpQuest,categorize} from '../shared/play.js';import {recordStudy} from '../shared/learning.js';import {noteCorrect,addChest} from '../shared/lucky.js';import {taipeiDate} from '../shared/game.js';import {sha} from './auth.js';
+import {staleGuard} from './guard.js';import {recordAnswer} from '../src/growth.js';import {addInk,bumpQuest,categorize} from '../shared/play.js';import {recordStudy} from '../shared/learning.js';import {noteCorrect,addChest} from '../shared/lucky.js';import {taipeiDate} from '../shared/game.js';import {sha} from './auth.js';
 export async function settleRaidAward(db,entry){
  const fingerprint=await sha(JSON.stringify(entry));
  for(let retry=0;retry<6;retry++){
@@ -19,11 +19,10 @@ export async function settleRaidAward(db,entry){
    state.food+=entry.summary.food;state.raidHistory=[entry.summary,...(state.raidHistory||[]).filter(x=>x.roomCode!==entry.roomCode)].slice(0,40);
    state.badges=[...new Set([...(state.badges||[]),...entry.summary.badges])];
   }
-  const guard=crypto.randomUUID();try{await db.batch([
+  try{await db.batch([
    db.prepare('UPDATE progress SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(state),entry.userId,row.version),
-   db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(guard),
-   db.prepare('INSERT INTO operations(user_id,request_id,route,result,created_at) VALUES(?,?,?,?,?)').bind(entry.userId,entry.id,fingerprint,'{}',entry.at),
-   db.prepare('DELETE FROM state_guards WHERE id=?').bind(guard)
+   staleGuard(db),
+   db.prepare('INSERT INTO operations(user_id,request_id,route,result,created_at) VALUES(?,?,?,?,?)').bind(entry.userId,entry.id,fingerprint,'{}',entry.at)
   ]);return;}catch(e){if(retry===5)throw e;}
  }
 }

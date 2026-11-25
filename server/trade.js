@@ -1,4 +1,4 @@
-// 卡牌交易 API：同班學生之間交換副本卡。所有交換在一個 D1 batch（交易）內完成，任一方狀態變動就整筆失敗。
+import {staleGuard} from './guard.js';// 卡牌交易 API：同班學生之間交換副本卡。所有交換在一個 D1 batch（交易）內完成，任一方狀態變動就整筆失敗。
 import {publicState,taipeiDate} from '../shared/game.js';
 import {TRADE,isTradeable,dupesOf,swapCards,publicDupes} from '../shared/trade.js';
 import {SPIRIT_BY_ID} from '../shared/catalog.js';
@@ -65,12 +65,11 @@ export async function handleTrade(env,user,path,body){
    try{
     await db.batch([
      db.prepare('UPDATE progress SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(A.state),t.from_id,A.row.version),
-     db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(g1),
+     staleGuard(db),
      db.prepare('UPDATE progress SET data=?,version=version+1 WHERE user_id=? AND version=?').bind(JSON.stringify(B.state),t.to_id,B.row.version),
-     db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(g2),
+     staleGuard(db),
      db.prepare("UPDATE trades SET status='accepted',decided_at=? WHERE id=? AND status='pending'").bind(now,t.id),
-     db.prepare('INSERT INTO state_guards(id,ok) VALUES(?,changes())').bind(g3),
-     db.prepare('DELETE FROM state_guards WHERE id IN (?,?,?)').bind(g1,g2,g3)
+     staleGuard(db)
     ]);
     const got=result.to==='new'?`「${nameOf(t.give_id)}」已加入你的圖鑑！`:`收到「${nameOf(t.give_id)}」副本卡。`;
     return {ok:true,state:publicState(B.state,now),message:`交易成功！你送出「${nameOf(t.want_id)}」，${got}`};

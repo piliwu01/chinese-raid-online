@@ -26,7 +26,7 @@ export class RaidRoom extends DurableObject{
  }
  async plan(s){let time=s.status==='active'?Math.min(s.nextAttackAt,s.endsAt,s.poisons?.length?s.poisonNextAt:Infinity,s.stunUntil>Date.now()?s.stunUntil:Infinity,s.drumUntil>Date.now()?s.drumUntil:Infinity,s.bossShield?.until>0?s.bossShield.until:Infinity,s.skill?Math.min(s.skill.until,s.skill.stage==='active'&&s.skill.tickAt?s.skill.tickAt:Infinity):(s.skillNextAt||Infinity)):null;if(s.outbox.length)time=Math.min(time||Infinity,Date.now()+5000);if(time)await this.ctx.storage.setAlarm(Math.max(Date.now()+100,time));else await this.ctx.storage.deleteAlarm();}
  async save(s,operation){s.revision=(s.revision||0)+1;await this.ctx.storage.transaction(async tx=>{await tx.put('room',s);if(operation)await tx.put(operation.key,operation.value);});await this.plan(s);}
- async flush(s){let changed=false;for(const entry of [...s.outbox]){try{await settleRaidAward(this.env.DB,entry);s.outbox=s.outbox.filter(x=>x.id!==entry.id);changed=true;}catch{break;}}if(changed)await this.save(s);await this.env.DB.prepare('UPDATE raid_rooms SET status=? WHERE code=?').bind(s.status,s.code).run().catch(()=>{});return s;}
+ async flush(s){let changed=false;for(const entry of [...s.outbox]){try{await settleRaidAward(this.env.DB,entry);s.outbox=s.outbox.filter(x=>x.id!==entry.id);changed=true;}catch{break;}}if(changed)await this.save(s);await this.env.DB.prepare('UPDATE raid_rooms SET status=? WHERE code=? AND status<>?').bind(s.status,s.code,s.status).run().catch(()=>{});return s;}
  snapshot(s,user){
   const m=s.members[user.id];const host=s.hostId===user.id&&user.role==='teacher';if(!host&&!m)raidError('你尚未加入這個房間。',403);
   const online=new Set(this.ctx.getWebSockets().map(w=>w.deserializeAttachment()?.id));
