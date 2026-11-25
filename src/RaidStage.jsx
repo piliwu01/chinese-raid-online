@@ -6,7 +6,7 @@ import {Swords,Shield,Heart,Clock,Zap,Users} from 'lucide-react';
 import {StatusChips,bossStatusItems,teamStatusItems} from './StatusChips.jsx';
 import {fxFor,shake,motionFor,idleStyle} from './fx.js';
 import {api} from './api.js';
-import {collectStageEvents,formation,effectLabel,EFFECT_LIFETIME,roomIdentity} from './raid-stage.js';
+import {collectStageEvents,formation,stageLayout,effectLabel,EFFECT_LIFETIME,roomIdentity} from './raid-stage.js';
 import './raid-stage.css';
 
 // 魔王反擊時墨汁潑濺的位置：[x%, y%, 尺寸(cqw), 延遲ms]，集中在右側隊伍區。
@@ -55,9 +55,8 @@ function useBossTaunt(room,incoming){
 }
 export default function RaidStage({room,now,remaining,strike,onExit}){
  const [fresh,setFresh]=useState([]);const cursor=useRef(null),effectId=useRef(0),arenaRef=useRef(null),[size,setSize]=useState({width:1200,height:600}),[effects,setEffects]=useState([]),[reduced,setReduced]=useState(false);
- const positions=formation(room.members),members=new Map(positions.map(m=>[m.id,m]));
- const columns=Math.min(10,Math.max(3,Math.ceil(Math.sqrt(room.members.length*1.6)))),rows=Math.max(1,Math.ceil(room.members.length/columns));
- const spriteSize=Math.max(20,Math.min(90,size.width*.065,size.width*.46/columns*.9,size.height<520?size.height*.15:999,size.height*.38/Math.max(1,rows-1)-(room.members.length>36?24:40)));
+ const {columns,rows,spriteSize}=stageLayout(room.members.length,size.width,size.height);
+ const positions=formation(room.members,columns),members=new Map(positions.map(m=>[m.id,m]));
  useEffect(()=>{const observer=new ResizeObserver(entries=>{const {width,height}=entries[0].contentRect;setSize({width,height});});observer.observe(arenaRef.current);return()=>observer.disconnect();},[]);
  useEffect(()=>{
   const media=matchMedia('(prefers-reduced-motion: reduce)'),change=()=>setReduced(media.matches);change();media.addEventListener('change',change);return()=>media.removeEventListener('change',change);
@@ -79,7 +78,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
  return <>
   <RaidVitals room={room} remaining={remaining} strike={strike}/><ActionTimeline room={room} now={now}/>
   <ClassCombo room={room} now={now}/>
-  <section ref={arenaRef} className={`raid-arena ${size.height<520?'is-short':''} ${size.height<520&&rows>=4?'is-dense':''} ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.status==='active'&&room.nextAttackAt&&room.nextAttackAt-now>0&&room.nextAttackAt-now<=3000&&!(room.stunUntil>now)?'is-charging':''} ${room.members.length>36?'is-crowded':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
+  <section ref={arenaRef} className={`raid-arena ${size.height<520?'is-short':''} ${size.height<520&&rows>=4?'is-dense':''} ${room.phase===2?'is-phase2':''} ${ultimate?'is-ultimate':''} ${room.status==='paused'?'is-paused':''} ${reduced?'reduced-motion':''} ${counter?'is-countering':''} ${room.status==='active'&&room.nextAttackAt&&room.nextAttackAt-now>0&&room.nextAttackAt-now<=3000&&!(room.stunUntil>now)?'is-charging':''} ${room.members.length>36?'is-crowded':room.members.length>=20?'is-many':''}`} aria-label={`全班共同戰場，${room.members.length} 位角色`} style={{'--formation-columns':columns}}>
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
    <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BreakSweep room={room} now={now}/><BossIntro room={room} now={now}/>

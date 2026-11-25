@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {collectStageEvents,formation,effectLabel} from '../src/raid-stage.js';
+import {collectStageEvents,formation,stageLayout,effectLabel} from '../src/raid-stage.js';
 import {newRoom,startRoom,recordHit,addEvent,RAID_EVENT_BUFFER} from '../shared/raid-rules.js';
 const room=(sequence,events=[],extra={})=>({code:'ABC234',createdAt:1000,serverNow:10000,sequence,events,...extra});
 test('first snapshot and different room establish baseline, never replay history',()=>{
@@ -29,4 +29,9 @@ test('60-player burst retains every actor event and fixed nonoverlapping formati
 test('all room sizes keep unique stable positions and real effect values',()=>{
  for(const n of [1,2,3,8,30,60]){const points=formation(Array.from({length:n},(_,i)=>({id:'s'+i})));assert.equal(new Set(points.map(p=>`${p.x},${p.y}`)).size,n);}
  assert.equal(effectLabel({type:'heal',value:3}),'護盾 ＋3');assert.equal(effectLabel({type:'strong',value:7}),'強攻 −7');
+});
+test('crowded projector arena spreads the team wide and flat so sprites stay large; staggered slots stay in bounds',()=>{
+ const L=stageLayout(30,1366,480);assert(L.columns>=9&&L.rows<=3,'30 人在矮場景要排成寬而扁');assert(L.spriteSize>=50,`夥伴至少 50 px，實際 ${L.spriteSize}`);
+ for(const [w,h] of [[1920,870],[1366,480],[1366,560],[390,400]])for(const n of [1,8,20,30,40,60]){const l=stageLayout(n,w,h);assert(l.columns>=3&&l.columns<=12&&l.spriteSize>=20&&l.spriteSize<=90);
+  const p=formation(Array.from({length:n},(_,i)=>({id:'s'+i})),l.columns);assert.equal(new Set(p.map(q=>`${q.x},${q.y}`)).size,n);assert(p.every(q=>q.x>=49&&q.x<=95.001&&q.y>=30&&q.y<=68));}
 });
