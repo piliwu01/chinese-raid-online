@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {freshState,applyAction,publicState} from '../shared/game.js';import {ITEMS,bagOf} from '../shared/items.js';import {newRoom,startRoom,useRaidItem,advanceRoom,recordHit,pauseRoom,resumeRoom} from '../shared/raid-rules.js';
 const now=1000000;const person=id=>({id,name:id,partner:{zhName:'夥伴'},joinOrder:0,damage:0,heal:0,charges:0,energy:0,correct:0,answered:0});
-const room=()=>{const s=newRoom({duration:600000,customHp:10000},now);s.members={a:person('a'),b:person('b')};startRoom(s,now);return s;};
+const room=()=>{const s=newRoom({duration:600000,customHp:10000},now);s.members={a:person('a'),b:person('b')};startRoom(s,now);s.skillNextAt=Infinity;/* 道具測試不受魔王隨機招式（如墨偶自爆）影響 */return s;};
 const student=()=>{const s=freshState();applyAction(s,'/starter',{id:2010},now);s.food=100;return s;};
 test('eight approved items have fixed prices, no hint card, legacy empty bag',()=>{assert.deepEqual(ITEMS.map(i=>i.price),[3,5,6,8,5,4,4,10]);assert.equal(ITEMS.length,8);assert.equal(ITEMS.some(i=>i.id==='hint'),false);assert(Object.values(publicState(student()).bag).every(x=>x===0));});
 test('shop ignores submitted price, reserves food, and inventory is independent of evolution stones',()=>{const s=student();s.food=4;applyAction(s,'/shop/buy',{itemId:'potion',price:0},now);assert.equal(s.food,1);assert.equal(s.bag.potion,1);assert.deepEqual(s.items,{});const before=JSON.stringify(s);assert.throws(()=>applyAction(s,'/shop/buy',{itemId:'fire'},now));assert.equal(JSON.stringify(s),before);});

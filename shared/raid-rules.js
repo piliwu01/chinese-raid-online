@@ -1,5 +1,5 @@
 import {comboMultiplier,CLASS_COMBO,classComboNeed} from './play.js';
-import {initSkills,advanceSkills,interruptSkill,wardAbsorb,skillActive,shiftSkills,BOSS_SKILL} from './raid-skills.js';
+import {initSkills,advanceSkills,interruptSkill,wardAbsorb,skillActive,shiftSkills,puppetHit,regenHit,markMult,sealed,BOSS_SKILL} from './raid-skills.js';
 import {damageBonus} from './talents.js';
 export const DIFF_DAMAGE={easy:8,medium:10,hard:20};
 // 魔王第二階段：血量降到一半時變身，反擊間隔由 40 秒縮短為 28 秒，並每 45 秒輪替一種弱點題型（傷害 ×2）。
@@ -72,7 +72,7 @@ export function finishRoom(s,status,now){
  }
 }
 export function advanceRoom(s,now){
- if(s.status!=='active')return false;let changed=advanceSkills(s,now,addEvent);if(settleBreak(s,now))changed=true;
+ if(s.status!=='active')return false;let changed=advanceSkills(s,now,addEvent);if(s.shield===0){finishRoom(s,'lost',s.lostAt||now);return true;}if(settleBreak(s,now))changed=true;
  while(true){const poisonTime=s.poisons?.length?s.poisonNextAt:Infinity,time=Math.min(s.nextAttackAt,poisonTime);if(time>now||time>=s.endsAt)break;changed=true;
   if(poisonTime<=s.nextAttackAt){const dose=s.poisons[0],m=s.members[dose.actorId];dose.ticks--;if(dose.ticks===0)s.poisons.shift();s.poisonNextAt=s.poisons.length?time+5000:null;const amount=skillActive(s,'ward')?0:Math.min(10,s.hp);s.hp-=amount;m.damage+=amount;addEvent(s,'poison',`${m.name}的毒霧造成 ${amount} 點傷害`,time,{actorId:m.id,value:amount});m.damageOrder=s.sequence;checkPhase(s,time);if(s.hp===0){finishRoom(s,'won',time);return true;}}
   else {s.nextAttackAt+=s.attackEvery||RAID.attackEvery;const guarded=(s.guardCharges||0)>0;if(guarded)s.guardCharges--;const amount=Math.round(RAID.bossDamage*(s.phase===2?PHASE2.damageMult:1))-(guarded?5:0);s.shield=Math.max(0,s.shield-amount);addEvent(s,'boss',`魔王反擊！全班護盾 −${amount}${guarded?'（守護結晶減傷 5 點）':''}`,time);if(s.shield===0){finishRoom(s,'lost',time);return true;}}
@@ -87,23 +87,25 @@ export function recordHit(s,m,correct,now,difficulty,category=''){
  if(!correct){m.combo=0;if(skillActive(s,'curse')){const cut=Math.min(BOSS_SKILL.curseShield,s.shield);s.shield-=cut;addEvent(s,'curse',`反噬詛咒！${m.name}答錯，全班護盾 −${cut}`,now,{actorId:m.id,value:cut});if(s.shield===0)finishRoom(s,'lost',now);}return;}m.correct++;m.combo=(m.combo||0)+1;m.bestCombo=Math.max(m.bestCombo||0,m.combo);
  {const bs=s.bossShield;if(bs&&category&&bs.weak.includes(category)&&Array.isArray(bs.revealed)&&!bs.revealed.includes(category)){bs.revealed.push(category);addEvent(s,'reveal',`${m.name}找出魔王的另一個破盾題型：${category}！`,now,{actorId:m.id,category});}}
  const weak=currentWeakness(s,now),isWeak=!!(weak&&category&&weak.category===category);
- const warded=skillActive(s,'ward');settleBreak(s,now);const broken=breakActive(s,now);
- const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult*(m.talent?.breakMult||2)/2:1)*comboMultiplier(m.combo)*damageBonus(m.talent,m.combo))+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
+ const warded=skillActive(s,'ward'),mark=markMult(s,m.id);settleBreak(s,now);const broken=breakActive(s,now);
+ const damage=warded?0:Math.min(Math.round(hitDamage(difficulty)*(isWeak?2:1)*(broken?RAID_BREAK.mult*(m.talent?.breakMult||2)/2:1)*comboMultiplier(m.combo)*damageBonus(m.talent,m.combo)*mark)+(s.drumUntil>now?5:0),s.hp);s.hp-=damage;m.damage+=damage;
  if(warded){const left=s.skill.wardLeft-1;addEvent(s,'ward-hit',`${m.name}擊中墨甲！還需答對 ${Math.max(0,left)} 題`,now,{actorId:m.id});wardAbsorb(s,now,1,addEvent,()=>stunBoss(s,now));}
  else {const bs=s.bossShield,shieldHit=!broken&&!!bs&&!!category&&bs.weak.includes(category);if(shieldHit)bs.left=Math.max(0,bs.left-1);
- const tags=`${broken?'破盾加倍！':''}${isWeak?'弱點命中！':''}${difficulty==='hard'?'難題命中！':''}${m.combo>=3?`${m.combo} 連擊！`:''}`;
+ const tags=`${mark>1?'印記加倍！':''}${broken?'破盾加倍！':''}${isWeak?'弱點命中！':''}${difficulty==='hard'?'難題命中！':''}${m.combo>=3?`${m.combo} 連擊！`:''}`;
  addEvent(s,'hit',`${tags}${m.name}與${m.nickname||m.partner.zhName}造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage,hard:difficulty==='hard',weak:isWeak,combo:m.combo,shieldHit,broken});m.damageOrder=s.sequence;
  if(shieldHit&&bs.left===0&&s.hp>0){bs.until=now+RAID_BREAK.window;bs.count++;m.breaks=(m.breaks||0)+1;addEvent(s,'break',`${m.name}擊破魔王護盾！全班 10 秒內傷害 ×2`,now,{actorId:m.id,until:bs.until});}}
+ puppetHit(s,now,1,addEvent,m);regenHit(s,now,addEvent);
  if(m.charges<RAID.maxCharges){m.energy++;if(m.energy===RAID.energyEvery){m.energy=0;m.charges++;}}
  checkPhase(s,now);if(s.hp===0){finishRoom(s,'won',now);return;}
  if(now>=(s.comboCooldownUntil||0)){s.comboHits=[...(s.comboHits||[]).filter(t=>now-t<CLASS_COMBO.window),now];if(s.comboHits.length>=classComboNeed(Object.keys(s.members).length))classUltimate(s,now);}
 }
 export function useRaidItem(s,m,id,now){
  if(s.status!=='active')raidError('請在進行中的討伐使用道具。',409);
+ if(sealed(s))raidError('封印咒發動中，暫時不能使用道具，先專心答題！',409);
  let message;
  if(id==='shield'){const amount=Math.min(10,s.maxShield-s.shield);if(amount<=0)raidError('護盾已滿，不消耗補給包。');s.shield+=amount;m.heal+=amount;addEvent(s,'heal',`${m.name}使用補給包，修復 ${amount} 點護盾`,now,{actorId:m.id,value:amount});m.healOrder=s.sequence;return {message:`已回復 ${amount} 點全班護盾。`};}
  if(id==='fire'&&skillActive(s,'ward')){addEvent(s,'ward-hit',`${m.name}的火焰瓶燒向墨甲！`,now,{actorId:m.id});wardAbsorb(s,now,3,addEvent,()=>stunBoss(s,now));return {message:'火焰瓶削弱了墨甲。'};}
- if(id==='fire'){const amount=Math.min(30,s.hp);s.hp-=amount;m.damage+=amount;addEvent(s,'fire',`${m.name}投出火焰瓶，造成 ${amount} 點傷害`,now,{actorId:m.id,value:amount});m.damageOrder=s.sequence;checkPhase(s,now);if(s.hp===0)finishRoom(s,'won',now);return {message:`火焰瓶造成 ${amount} 點傷害。`};}
+ if(id==='fire'){const amount=Math.min(30,s.hp);s.hp-=amount;m.damage+=amount;addEvent(s,'fire',`${m.name}投出火焰瓶，造成 ${amount} 點傷害`,now,{actorId:m.id,value:amount});puppetHit(s,now,3,addEvent,m);m.damageOrder=s.sequence;checkPhase(s,now);if(s.hp===0)finishRoom(s,'won',now);return {message:`火焰瓶造成 ${amount} 點傷害。`};}
  if(id==='energy'){if(m.charges>=RAID.maxCharges)raidError('技能機會已滿，不消耗能量果實。');m.charges++;message=`${m.name}使用能量果實，技能機會 ＋1`;}
  else if(id==='stun'){s.stunUntil=Math.max(now,s.stunUntil||0)+10000;s.nextAttackAt+=10000;message=`${m.name}投出暈眩彈，魔王多暈眩 10 秒`;}
  else if(id==='poison'){s.poisons||=[];const last=s.poisons.at(-1);if(last?.actorId===m.id)last.ticks+=6;else s.poisons.push({actorId:m.id,ticks:6});if(!s.poisonNextAt)s.poisonNextAt=now+5000;message=`${m.name}施放毒霧，增加 6 次毒傷`;}
@@ -112,9 +114,9 @@ export function useRaidItem(s,m,id,now){
  else raidError('無效的討伐道具。');addEvent(s,id,message,now,{actorId:m.id});return {message};
 }
 export function useSkill(s,m,kind,now){
- if(s.status!=='active')raidError('討伐未進行中。',409);if(m.charges<1)raidError('技能能量不足。');
+ if(s.status!=='active')raidError('討伐未進行中。',409);if(sealed(s))raidError('封印咒發動中，暫時不能使用技能，先專心答題！',409);if(m.charges<1)raidError('技能能量不足。');
  if(kind==='strong'&&skillActive(s,'ward')){m.charges--;addEvent(s,'ward-hit',`${m.name}的強力攻擊重擊墨甲！`,now,{actorId:m.id});wardAbsorb(s,now,3,addEvent,()=>stunBoss(s,now));}
- else if(kind==='strong'){const damage=Math.min(RAID.strong,s.hp);s.hp-=damage;m.damage+=damage;m.charges--;addEvent(s,'strong',`${m.name}發動強力攻擊！造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage});m.damageOrder=s.sequence;checkPhase(s,now);if(s.hp===0)finishRoom(s,'won',now);}
+ else if(kind==='strong'){const damage=Math.min(RAID.strong,s.hp);s.hp-=damage;m.damage+=damage;m.charges--;addEvent(s,'strong',`${m.name}發動強力攻擊！造成 ${damage} 點傷害`,now,{actorId:m.id,value:damage});puppetHit(s,now,3,addEvent,m);m.damageOrder=s.sequence;checkPhase(s,now);if(s.hp===0)finishRoom(s,'won',now);}
  else if(kind==='heal'){const healed=Math.min(RAID.heal+(m.talent?.raidHeal||0),s.maxShield-s.shield);if(!healed)raidError('護盾已滿，不消耗技能。');s.shield+=healed;m.heal+=healed;m.charges--;addEvent(s,'heal',`${m.name}修復 ${healed} 點全班護盾`,now,{actorId:m.id,value:healed});m.healOrder=s.sequence;}
  else raidError('技能無效。');
 }

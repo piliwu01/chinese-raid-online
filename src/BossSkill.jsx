@@ -5,8 +5,14 @@ export function SkillBanner({room,now,compact=false}){
  const sk=room.skill;if(!sk?.id||!['active','paused'].includes(room.status))return null;
  const def=BOSS_SKILLS[sk.id];const left=Math.max(0,Math.ceil((sk.until-now)/1000));
  if(sk.stage==='warn')return <div className={`boss-skill-warn ${compact?'is-compact':''}`} role="alert"><b>⚠️ {def.warn}</b><span>{left} 秒後發動「{def.name}」{sk.id==='ward'?'，快準備一起答對！':''}</span></div>;
- const detail=sk.id==='ward'?`還需全班答對 ${sk.wardLeft} 題擊破（${sk.wardNeed-sk.wardLeft}/${sk.wardNeed}）`:sk.id==='curse'?`答錯每次全班護盾 −2 · 剩 ${left} 秒`:sk.id==='fog'?(sk.fogMe?`你的選項被墨霧遮住了，抹開它！`:`${sk.fogCount} 位同學被墨霧籠罩 · 剩 ${left} 秒`):`選項順序已打亂 · 剩 ${left} 秒`;
- return <div className={`boss-skill-active skill-${sk.id} ${compact?'is-compact':''}`} role="status"><b>{def.icon} {def.name}</b><span>{detail}</span>{sk.id==='ward'&&<i className="ward-bar"><em style={{width:`${(sk.wardNeed-sk.wardLeft)/sk.wardNeed*100}%`}}/></i>}</div>;
+ const alive=(sk.puppets||[]).filter(x=>x>0).length;
+ const detail=sk.id==='ward'?`還需全班答對 ${sk.wardLeft} 題擊破（${sk.wardNeed-sk.wardLeft}/${sk.wardNeed}）`:sk.id==='curse'?`答錯每次全班護盾 −2 · 剩 ${left} 秒`:sk.id==='fog'?(sk.fogMe?`你的選項被墨霧遮住了，抹開它！`:`${sk.fogCount} 位同學被墨霧籠罩 · 剩 ${left} 秒`)
+  :sk.id==='summon'?`還有 ${alive} 隻墨偶，答對就能打散 · 剩 ${left} 秒，沒打散的每隻護盾 −5`
+  :sk.id==='regen'?`魔王已回復 ${sk.healed||0} 點 · 全班再答對 ${sk.regenLeft} 題就能打斷 · 剩 ${left} 秒`
+  :sk.id==='seal'?`道具和技能暫時不能用，專心答題 · 剩 ${left} 秒`
+  :sk.id==='mark'?(sk.markMe?`你被魔王盯上了！答對打出雙倍傷害 · 剩 ${left} 秒`:`${(sk.marked||[]).length} 位同學被盯上，他們答對傷害 ×2 · 剩 ${left} 秒`)
+  :`選項順序已打亂 · 剩 ${left} 秒`;
+ return <div className={`boss-skill-active skill-${sk.id} ${sk.markMe?'is-marked-me':''} ${compact?'is-compact':''}`} role="status"><b>{def.icon} {def.name}</b><span>{detail}</span>{sk.id==='ward'&&<i className="ward-bar"><em style={{width:`${(sk.wardNeed-sk.wardLeft)/sk.wardNeed*100}%`}}/></i>}{sk.id==='summon'&&<span className="puppet-pips" aria-label={`墨偶剩 ${alive} 隻`}>{(sk.puppets||[]).map((n,i)=><i key={i} className={n>0?'':'down'}>👺<small>{n>0?`${n} 題`:'散'}</small></i>)}</span>}{sk.id==='regen'&&<i className="ward-bar regen-bar"><em style={{width:`${(sk.regenNeed-sk.regenLeft)/sk.regenNeed*100}%`}}/></i>}</div>;
 }
 // 亂序咒：每題只打亂一次（同一題之後不再換位置）
 export function useShuffledOptions(room,q){

@@ -440,3 +440,46 @@
 .raid-board .raid-arena.is-dense .unit-partner{display:none}.raid-board .raid-arena.is-dense .unit-name{line-height:1.25}
 /* 「我們的隊伍」標題疊在場景背景圖上方，並加深色底，花俏背景上也讀得清楚 */
 .raid-arena .formation-title{z-index:3;padding:6px 12px;border-radius:8px;border-bottom:0;background:linear-gradient(90deg,#0b1424d9,#0b142499 70%,#0b142400);text-shadow:0 1px 3px #000}
+
+/* ===== 2026-11-25 魔王新招式：墨偶召喚、墨卷重生、封印咒、考驗印記 ===== */
+.stage-puppets{position:absolute;left:30%;top:56%;z-index:5;display:flex;gap:clamp(6px,1.2cqw,18px);transform:translateX(-10%)}
+.stage-puppet{display:flex;flex-direction:column;align-items:center;gap:2px;animation:puppetIn .5s ease-out both}
+.stage-puppet:nth-child(2){animation-delay:.12s}.stage-puppet:nth-child(3){animation-delay:.24s}
+.stage-puppet>span{font-size:clamp(28px,4.2cqw,64px);line-height:1;filter:drop-shadow(0 0 10px #7c3aed) drop-shadow(0 3px 4px #000);animation:puppetBob 1.4s ease-in-out infinite}
+.stage-puppet>b{font-size:clamp(11px,1.05cqw,16px);color:#fde68a;background:#1b0f2ee6;border:1px solid #a78bfa88;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.stage-puppet.is-down>span{opacity:.25;filter:grayscale(1);animation:none;transform:scale(.8) rotate(-12deg)}
+.stage-puppet.is-down>b{color:#a7f3d0;border-color:#34d39988}
+@keyframes puppetIn{from{opacity:0;transform:translateY(-30px) scale(.4)}to{opacity:1;transform:none}}
+@keyframes puppetBob{50%{transform:translateY(-6px)}}
+.stage-boss.is-regen>img{filter:drop-shadow(0 0 18px #34d399) drop-shadow(0 0 40px #10b98188) saturate(1.15);animation:regenPulse 1.6s ease-in-out infinite}
+@keyframes regenPulse{50%{filter:drop-shadow(0 0 30px #6ee7b7) drop-shadow(0 0 60px #10b981aa) brightness(1.1)}}
+.boss-regen{position:absolute;top:2%;left:50%;transform:translateX(-50%);z-index:4;padding:5px 12px;border-radius:10px;background:#052e1fe6;border:1px solid #34d399;color:#a7f3d0;font-weight:800;font-size:clamp(13px,1.3cqw,20px);white-space:nowrap;text-align:center}
+.boss-regen small{display:block;font-size:.7em;font-weight:600;color:#d1fae5}
+.stage-unit.is-marked .unit-sprite>img{filter:drop-shadow(0 0 8px #facc15) drop-shadow(0 0 16px #f59e0b)}
+.unit-mark{position:absolute;left:50%;top:0;transform:translate(-50%,-105%);font-style:normal;font-weight:900;font-size:clamp(10px,1cqw,15px);color:#1c1300;background:linear-gradient(#fde68a,#f59e0b);border-radius:99px;padding:1px 7px;white-space:nowrap;box-shadow:0 0 10px #f59e0baa;animation:markPop .4s ease-out both;z-index:2}
+@keyframes markPop{from{transform:translate(-50%,-60%) scale(.3);opacity:0}}
+.boss-skill-active.skill-summon{background:#1b0f2eee;border-color:#a78bfa}
+.boss-skill-active.skill-regen{background:#052e1fee;border-color:#34d399;color:#d1fae5}
+.boss-skill-active.skill-regen span{color:#a7f3d0}
+.regen-bar em{background:linear-gradient(90deg,#6ee7b7,#10b981)}
+.boss-skill-active.skill-seal{background:#1f2937ee;border-color:#9ca3af;color:#f3f4f6}
+.boss-skill-active.skill-mark{background:#2a1f05ee;border-color:#facc15;color:#fef3c7}
+.boss-skill-active.skill-mark span{color:#fde68a}
+.boss-skill-active.is-marked-me{box-shadow:0 0 0 2px #facc15,0 0 24px #f59e0b88;animation:markGlow 1.2s ease-in-out infinite}
+@keyframes markGlow{50%{box-shadow:0 0 0 2px #fde68a,0 0 34px #f59e0bcc}}
+.puppet-pips{display:flex;gap:8px}.puppet-pips i{font-style:normal;font-size:20px;display:flex;align-items:center;gap:3px}.puppet-pips i small{font-size:12px;color:#fde68a}.puppet-pips i.down{opacity:.35;filter:grayscale(1)}
+.sealed-note{margin:8px 0;padding:8px 12px;border-radius:10px;background:#1f2937;border:1px dashed #9ca3af;color:#e5e7eb;font-size:13px;font-weight:700}
+.raid-skills.is-sealed{position:relative}.raid-skills.is-sealed button{filter:grayscale(.8)}
+@media(prefers-reduced-motion:reduce){.stage-puppet,.stage-puppet>span,.stage-boss.is-regen>img,.unit-mark,.boss-skill-active.is-marked-me{animation:none}}
+/* 場景內的魔王技能橫幅一律在最上層（不被標題、隊伍蓋住） */
+.raid-arena>.boss-skill-active,.raid-arena>.boss-skill-warn{position:relative;z-index:9;margin:8px 12px}
+/* 墨偶站在魔王前方、魔王名字上方，不擠到學生隊伍 */
+.raid-board .stage-puppets{left:3%;width:42%;top:auto;bottom:calc(30px + 4.4cqw + clamp(56px,7cqw,96px));justify-content:center;transform:none}
+.raid-board .raid-arena.is-short .stage-puppet>span{font-size:clamp(24px,3.2cqw,44px)}
+/* 回血標示放在魔王名字上方 */
+.raid-board .boss-regen{top:auto;bottom:clamp(56px,7cqw,96px)}
+.raid-arena:has(.stage-puppets) .boss-regen{display:none}
+/* 考驗印記貼在自己的角色圖下緣，不往上蓋到隊伍標題 */
+.unit-mark{top:calc(var(--sprite-size,60px) - 4px);transform:translate(-50%,-100%)}
+@keyframes markPop{from{transform:translate(-50%,-60%) scale(.3);opacity:0}}
+@media(max-width:600px){.raid-board .stage-puppets{left:0;width:46%;gap:3px;bottom:132px}.raid-board .stage-puppet>span{font-size:22px}.raid-board .stage-puppet>b{font-size:9px;padding:1px 5px}.raid-board .boss-regen{bottom:100px;font-size:11px}}

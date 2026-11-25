@@ -74,6 +74,7 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
   return()=>clearInterval(timer);
  },[room.status]);
  const taunt=useBossTaunt(room,fresh);
+ const sk=room.skill||{},marked=new Set(sk.id==='mark'&&sk.stage==='active'?sk.marked||[]:[]);
  const bossHits=effects.filter(e=>['hit','strong','fire','poison','ultimate'].includes(e.type)),counter=effects.filter(e=>e.type==='boss').at(-1),ultimate=effects.filter(e=>e.type==='ultimate').at(-1),phaseFx=effects.filter(e=>e.type==='phase').at(-1),last=effects.at(-1);
  return <>
   <RaidVitals room={room} remaining={remaining} strike={strike}/><ActionTimeline room={room} now={now}/>
@@ -82,20 +83,22 @@ export default function RaidStage({room,now,remaining,strike,onExit}){
    <div className="stage-moon"/><div className="stage-ridge ridge-back"/><div className="stage-ridge ridge-front"/><div className="stage-floor"/><SceneBg name="raid"/>
    <div className="raid-stage-caption"><span>CLASS RAID · LIVE BATTLE</span><h2>暮光裂隙</h2><p>每一位夥伴，都在這裡。</p></div>
    <WeakBanner room={room} now={now}/><SkillBanner room={room} now={now}/><SkillSweep room={room} now={now}/><BreakSweep room={room} now={now}/><BossIntro room={room} now={now}/>
-   <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''}`}>
+   <div className={`stage-boss ${bossHits.length?'is-hit':''} ${room.stunUntil>now?'is-stunned':''} ${sk.id==='regen'&&sk.stage==='active'?'is-regen':''}`}>
     <div className="stage-boss-aura"/><div className="stage-boss-shadow"/>
     <StatusChips items={bossStatusItems(room,now)} label="魔王狀態" className="boss-status"/>
     <img src="/assets/boss.png" alt="魔王墨卷魔神"/>
     <div className="stage-boss-name"><span>RAID BOSS</span><h3>墨卷魔神 · 國文試煉{room.phase===2&&<em className="phase-tag">暴走</em>}</h3></div>
     {taunt&&<div key={taunt.key} className="boss-taunt" role="status">{taunt.text}</div>}
     <div className="boss-charge" aria-hidden="true"><i/><i/><i/><b>魔王蓄力中…</b></div>
+    {sk.id==='regen'&&sk.stage==='active'&&<div className="boss-regen" role="status">💚 回血中 ＋{sk.healed||0}<small>再答對 {sk.regenLeft} 題打斷</small></div>}
    </div>
+   {sk.id==='summon'&&sk.stage==='active'&&<div className="stage-puppets" role="status" aria-label="墨偶">{(sk.puppets||[]).map((n,i)=><div key={i} className={`stage-puppet ${n>0?'':'is-down'}`}><span aria-hidden="true">👺</span><b>{n>0?`${n} 題`:'打散！'}</b></div>)}</div>}
    <div className="formation-title"><Users size={14}/>我們的隊伍 <b>{room.members.length}</b><span>{room.members.filter(m=>m.online).length} 人在線</span><StatusChips items={teamStatusItems(room,now)} label="全班狀態" className="team-status"/></div>
    {positions.map(m=>{
     const action=effects.filter(e=>e.actorId===m.id).at(-1),attacking=(action&&['hit','strong','fire'].includes(action.type))||!!ultimate,supporting=action&&!attacking;
-    return <div key={m.id} className={`stage-unit ${attacking?'is-attacking':''} ${supporting?'is-supporting':''} ${m.online?'is-online':'is-offline'} ${counter?'is-inkhit':''}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--sprite-size':`${spriteSize}px`,'--hit-delay':`${520+(positions.indexOf(m)%12)*70}ms`}} data-member-id={m.id}>
+    return <div key={m.id} className={`stage-unit ${marked.has(m.id)?'is-marked':''} ${attacking?'is-attacking':''} ${supporting?'is-supporting':''} ${m.online?'is-online':'is-offline'} ${counter?'is-inkhit':''}`} style={{left:`${m.x}%`,top:`${m.y}%`,'--sprite-size':`${spriteSize}px`,'--hit-delay':`${520+(positions.indexOf(m)%12)*70}ms`}} data-member-id={m.id}>
      <div className="unit-plinth"/><div className="unit-sprite" key={ultimate?`u${ultimate.key}`:action?.key||'idle'}><img className={`idle-${motionFor(m.partner.type)}${m.partner.shiny?' is-shiny':''}`} style={idleStyle(m.partner.id+m.x)} src={`/assets/${m.partner.id}.png`} alt={`${m.name}的${m.nickname||m.partner.zhName}`} loading="eager"/></div>
-     <span className="unit-name" title={m.name}><i/>{m.name}</span><small className="unit-partner">{m.title?<em className="unit-title">「{m.title}」</em>:null}{m.nickname||m.partner.zhName}</small>
+     {marked.has(m.id)&&<em className="unit-mark" aria-label="被魔王盯上：答對傷害 ×2">🎯×2</em>}<span className="unit-name" title={m.name}><i/>{m.name}</span><small className="unit-partner">{m.title?<em className="unit-title">「{m.title}」</em>:null}{m.nickname||m.partner.zhName}</small>
     </div>;
    })}
    {!positions.length&&<div className="stage-empty"><Users size={25}/><h3>等待夥伴入場</h3><p>學生加入後，角色會出現在這裡。</p></div>}

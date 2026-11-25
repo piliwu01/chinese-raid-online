@@ -12,7 +12,7 @@ export function BossIntro({ room, now }) {
   useEffect(() => {
     if (!start || room.status !== 'active' || seen.current === start.at) return;
     seen.current = start.at;
-    if (now - start.at > 2500) return; // 開戰很久後才打開投影頁：不補播
+    if ((room.serverNow || now) - start.at > 2500) return; // 開戰很久後才打開投影頁：不補播（用伺服器時間判斷，電腦時鐘不準也不會重播）
     setShow(start.at);
   }, [start?.at, room.status]);
   useEffect(() => { if (!show) return; const t = setTimeout(() => setShow(null), reduced() ? 1800 : INTRO_MS); return () => clearTimeout(t); }, [show]);
