@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Flame, Home, Swords, Trophy, Users } from 'lucide-react';
 import { api } from './api.js';
+import { bossFor, roundKey, baseWeek } from '../shared/world-boss.js';
 import './world.css';
 
 function left(ms) {
@@ -69,6 +70,7 @@ export default function WorldBossApp({ user, onExit }) {
             <p>本週答對至少 <b>{view.rules.rewardMin}</b> 題才能領獎。</p>
             <p>🎉 打倒：寶箱 {view.rules.win.chest}、玉符 {view.rules.win.jade}、食物 {view.rules.win.food}；貢獻前 {view.rules.top} 名加稱號「{view.rules.title}」。</p>
             <p>💪 沒打倒：食物 {view.rules.lose.food}。</p></div>
+          {teacher && <RestartCard view={view} open={open} onDone={load} />}
         </aside>
       </div>
     </main>
@@ -76,4 +78,35 @@ export default function WorldBossApp({ user, onExit }) {
 }
 function ClassPick({ classes, cls, setCls }) {
   return <label className="wb-class">查看班級<select value={cls} onChange={e => setCls(e.target.value)}>{classes.map(c => <option key={c} value={c}>{c}</option>)}</select></label>;
+}
+
+// 老師：提前結算目前這隻並重開新的一隻（2026-11-25）。先填血量，再看確認內容才送出。
+function RestartCard({ view, open, onDone }) {
+  const suggest = Math.max(view.rules.hpMin, view.classSize * view.rules.hpPerStudent);
+  const [hp, setHp] = useState(String(suggest)), [confirm, setConfirm] = useState(false), [busy, setBusy] = useState(false), [msg, setMsg] = useState(''), [err, setErr] = useState('');
+  useEffect(() => { setHp(String(suggest)); setConfirm(false); setErr(''); }, [view.className, view.week]);
+  const n = Math.round(Number(hp)), valid = Number.isFinite(n) && n >= view.rules.hpMin && n <= view.rules.hpMax;
+  const next = bossFor(roundKey(baseWeek(view.week), (view.round || 1) + 1)), eligible = view.top.filter(r => r.correct >= view.rules.rewardMin).length;
+  async function go() {
+    setBusy(true); setErr('');
+    try { const r = await api('/world/restart', { className: view.className, maxHp: n, expect: view.week }); setMsg(`已發獎並結算${view.boss.name}；${next.name}（血量 ${r.maxHp.toLocaleString()}）上場了！`); setConfirm(false); await onDone(); }
+    catch (e) { setErr(e.message); setConfirm(false); await onDone(); }
+    finally { setBusy(false); }
+  }
+  return <div className="wb-card wb-restart"><h3>提前結算並重開</h3>
+    {!open ? <p className="wb-note">本週已結算，下週一 00:00 會自動出現新的山海魔王。</p> : <>
+      <p className="wb-note">魔王太早被打倒時使用：照週日 22:00 的規則立刻發獎，再換下一隻神獸重新開打。</p>
+      <label className="wb-hp-input">新魔王血量<input type="number" inputMode="numeric" min={view.rules.hpMin} max={view.rules.hpMax} step={1000} value={hp} onChange={e => { setHp(e.target.value); setConfirm(false); }} disabled={busy} /></label>
+      <small className="wb-hint">建議 {suggest.toLocaleString()}（{view.classSize} 人 × {view.rules.hpPerStudent.toLocaleString()}）；可填 {view.rules.hpMin.toLocaleString()}～{view.rules.hpMax.toLocaleString()}</small>
+      {!confirm ? <button className="secondary-button wb-restart-go" disabled={!valid || busy} onClick={() => { setConfirm(true); setMsg(''); }}>提前結算並重開…</button>
+        : <div className="wb-confirm" role="alertdialog" aria-label="確認提前結算">
+          <p>結算 <b>{view.boss.name}</b>：{view.defeated ? '🎉 已打倒' : `還沒打倒（剩 ${view.hp.toLocaleString()}）`}</p>
+          <p>{eligible ? `${eligible} 人答對滿 ${view.rules.rewardMin} 題，可領${view.defeated ? '打倒獎' : '參加獎'}；學生下次登入或重新整理時自動領取。` : `還沒有人答對滿 ${view.rules.rewardMin} 題，這次不會發獎。`}</p>
+          <p>新的一隻：<b>{next.name}</b>，血量 <b>{n.toLocaleString()}</b>。答對 {view.rules.rewardMin} 題的門檻重新累積。</p>
+          <p className="wb-warn">結算後不能復原。</p>
+          <div className="wb-confirm-actions"><button className="primary-button" disabled={busy} onClick={go}>{busy ? '處理中…' : '確定結算並重開'}</button><button className="secondary-button" disabled={busy} onClick={() => setConfirm(false)}>取消</button></div>
+        </div>}
+    </>}
+    {msg && <p className="wb-done" role="status">{msg}</p>}{err && <p className="wb-error" role="alert">{err}</p>}
+  </div>;
 }

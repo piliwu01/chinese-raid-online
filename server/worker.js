@@ -11,7 +11,7 @@ import {handleTrade,tradeLog} from './trade.js';
 import {learningReport,classWeakness} from './report.js';
 import {handleHero,pendingAwards,markClaimed} from './hero.js';
 import {pickBankId} from './banks.js';
-import {worldView,worldContext,hitStatement,pendingWorld,markWorldClaimed} from './world.js';
+import {worldView,worldContext,hitStatement,pendingWorld,markWorldClaimed,restartRound} from './world.js';
 export {RaidRoom} from './raid-room.js';
 export {PvpRoom} from './pvp-room.js';
 
@@ -77,6 +77,8 @@ async function route(req,env){
  if(path==='/study/summary'&&req.method==='POST'){const row=await db.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first();return json({summary:studySummary(JSON.parse(row.data))});}
  if((path==='/hero/board'||path==='/hero/pending')&&req.method==='POST')return json(await handleHero(env,user,path));
  if(path==='/world/view'&&req.method==='POST')return json(await worldView(env,user,body));
+ // 老師：提前結算這班目前的山海魔王，並重開一隻指定血量的新魔王（同一週）。
+ if(path==='/world/restart'&&req.method==='POST'){if(user.role!=='teacher')fail('只有老師可以使用此功能。',403);return json(await restartRound(db,String(body.className||'').trim().slice(0,40),body.maxHp,Date.now(),String(body.expect||'')));}
  if(path==='/world/pending'&&req.method==='POST')return json({awards:await pendingWorld(db,user)});
  if(path.startsWith('/trade/')&&req.method==='POST'){if(!['/trade/board','/trade/offer','/trade/accept','/trade/decline','/trade/cancel'].includes(path))fail('找不到這個功能。',404);return json(await handleTrade(env,user,path,body));}
  if(path.startsWith('/pvp/'))return handlePvp(req,env,user,path,body);

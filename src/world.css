@@ -89,3 +89,15 @@
 .wb-how li b{font-size:24px;line-height:1.2}
 .wb-how em{font-style:normal;font-weight:900;color:#ffb3d1}
 @media(max-width:600px){.wb-how li{font-size:16px}.wb-how h3{font-size:19px}}
+/* 2026-11-25 老師：提前結算並重開 */
+.wb-restart .wb-note{margin:0 0 12px;font-size:14px;line-height:1.6;color:#c3cde0}
+.wb-hp-input{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;flex-wrap:wrap}
+.wb-hp-input input{width:150px;max-width:100%;padding:8px 12px;border-radius:10px;background:#111a29;color:#edf1fa;border:1px solid #4a5d7a;font-size:17px;font-family:ui-monospace,monospace}
+.wb-hint{display:block;margin:6px 0 12px;font-size:12px;color:#9fb0c8}
+.wb-restart-go{width:100%}
+.wb-confirm{background:#2a1f2f;border:1px solid #f0a0b866;border-radius:12px;padding:14px;font-size:14px;line-height:1.6}
+.wb-confirm p{margin:0 0 6px;color:#edf1fa}.wb-confirm b{color:#ffd6a0}
+.wb-confirm .wb-warn{color:#ff9e91;font-weight:800}
+.wb-confirm-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.wb-confirm-actions button{flex:1;min-width:120px}
+.wb-restart .wb-done{margin:12px 0 0;color:#8fe3c8;font-weight:800;font-size:14px}
+.wb-restart .wb-error{margin:12px 0 0;color:#ff9e91;font-weight:800;font-size:14px}

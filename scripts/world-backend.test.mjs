@@ -55,7 +55,17 @@ test('world boss integration: class-wide damage, teacher view, idempotent settle
    const a=await call('/answer',{questionId:q.id,choice:right(q),bankId:bank.bankId,requestId:crypto.randomUUID()},s2);assert.equal(a.data.event.world.week,week+'#2');
    const v2=await call('/world/view',{},s2);assert.equal(v2.data.damage,a.data.event.world.damage,'傷害打到第二隻');assert.equal(v2.data.participants,1);
    const old=await db.prepare('SELECT COALESCE(SUM(damage),0) t FROM world_hits WHERE week=?').bind(week).first();assert.equal(v.data.lastWeek.total,old.t,'第一隻的傷害不變');
-   assert.equal((await restartRound(db,'313',500)).next,week+'#3');
+   assert.equal((await restartRound(db,'313',5000)).next,week+'#3');
+  });
+  await t.test('teacher restart button API: teachers only, valid HP, and a stale screen cannot settle the new boss',async()=>{
+   const v=await call('/world/view',{className:'313'},t1);assert.equal(v.data.week,week+'#3');assert.equal(v.data.rules.hpPerStudent,2300);
+   assert.equal((await call('/world/restart',{className:'313',maxHp:67000,expect:v.data.week},s1)).status,403,'學生不能按');
+   assert.equal((await call('/world/restart',{className:'313',maxHp:50,expect:v.data.week},t1)).status,400,'血量太少');
+   assert.equal((await call('/world/restart',{className:'999',maxHp:67000,expect:v.data.week},t1)).status,404,'沒有這班');
+   const ok=await call('/world/restart',{className:'313',maxHp:67000,expect:v.data.week},t1);assert.equal(ok.status,200);assert.equal(ok.data.next,week+'#4');assert.equal(ok.data.maxHp,67000);
+   const again=await call('/world/restart',{className:'313',maxHp:67000,expect:v.data.week},t1);assert.equal(again.status,409,'重複按不會把新的一隻也結算');
+   const v2=await call('/world/view',{className:'313'},t1);assert.equal(v2.data.week,week+'#4');assert.equal(v2.data.maxHp,67000);assert.equal(v2.data.open,true);
+   const other=await call('/world/view',{},x1);assert.equal(other.data.round,1,'別班不受影響');
   });
  }finally{await mf.dispose();}
 });

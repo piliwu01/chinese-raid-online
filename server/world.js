@@ -21,8 +21,13 @@ export async function ensureBoss(db,className,week,now=Date.now()){
  return {...await db.prepare('SELECT * FROM world_bosses WHERE week=? AND class_name=?').bind(week,className).first(),settled:false};
 }
 // 老師提前結算目前這隻並重開下一隻（同一週）：照週日結算的規則發獎，新的一隻血量由老師指定。
-export async function restartRound(db,className,maxHp,now=Date.now()){
- const week=worldWeek(now),cur=await ensureBoss(db,className,week,now);if(now>=worldWindow(week).end)err('本週已結算，下週一會自動出現新的山海魔王。',409);
+// expect：畫面上看到的那隻（代號），不同就拒絕，避免重複按、或兩個畫面各按一次把新開的那隻也結算掉。
+export const WORLD_HP_RANGE={min:1000,max:1000000};
+export async function restartRound(db,className,maxHp,now=Date.now(),expect=null){
+ if(!className||!(await studentCount(db,className)))err('找不到這個班級的學生。',404);
+ if(maxHp!=null&&!(Number(maxHp)>=WORLD_HP_RANGE.min&&Number(maxHp)<=WORLD_HP_RANGE.max))err(`血量請填 ${WORLD_HP_RANGE.min.toLocaleString()}～${WORLD_HP_RANGE.max.toLocaleString()}。`);
+ const week=worldWeek(now);if(now>=worldWindow(week).end)err('本週已結算，下週一會自動出現新的山海魔王。',409);
+ const cur=await ensureBoss(db,className,week,now);if(expect!=null&&String(expect)!==cur.week)err('山海魔王已經換過了，畫面已重新整理，請再確認一次。',409);
  const stmts=cur.settled?[]:await settleStatements(db,className,cur,now),next=roundKey(week,roundOf(cur.week)+1),hp=Math.max(1,Math.round(Number(maxHp)||worldMaxHp(await studentCount(db,className))));
  stmts.push(db.prepare('INSERT OR IGNORE INTO world_bosses(week,class_name,max_hp,boss,weak,created_at) VALUES(?,?,?,?,?,?)').bind(next,className,hp,bossFor(next).id,pickWeak(await weakPool(db),next,className),now));
  await db.batch(stmts);return {settled:cur.week,next,maxHp:hp};
@@ -78,6 +83,6 @@ export async function worldView(env,user,body={},now=Date.now()){
  const last=await db.prepare('SELECT s.week,s.won,s.total,b.max_hp,b.boss FROM world_settled s JOIN world_bosses b ON b.week=s.week AND b.class_name=s.class_name WHERE s.class_name=? AND s.week<>? ORDER BY s.created_at DESC LIMIT 1').bind(className,week).first();
  return {className,week,open,startsAt:win.start,endsAt:win.end,serverNow:now,boss:{id:info.id,name:info.name,line:info.line},maxHp:boss.max_hp,damage:Math.min(total,boss.max_hp),hp:Math.max(0,boss.max_hp-total),defeated:total>=boss.max_hp,weak:boss.weak,
   participants:rows.filter(r=>r.correct>0).length,classSize:await studentCount(db,className),me:meRow||{damage:0,correct:0,rank:null},
-  top:user.role==='teacher'?list:list.slice(0,5),rules:{rewardMin:WORLD.rewardMin,share:WORLD.share,weakMult:WORLD.weakMult,win:WORLD.win,lose:WORLD.lose,top:WORLD.top,title:WORLD.title},
+  top:user.role==='teacher'?list:list.slice(0,5),rules:{hpPerStudent:WORLD.hpPerStudent,hpMin:WORLD_HP_RANGE.min,hpMax:WORLD_HP_RANGE.max,rewardMin:WORLD.rewardMin,share:WORLD.share,weakMult:WORLD.weakMult,win:WORLD.win,lose:WORLD.lose,top:WORLD.top,title:WORLD.title},
   round:roundOf(week),lastWeek:last?{week:last.week,sameWeek:last.week.split('#')[0]===week.split('#')[0],won:!!last.won,total:last.total,maxHp:last.max_hp,boss:(WORLD.bosses.find(b=>b.id===last.boss)||{}).name||''}:null};
 }
