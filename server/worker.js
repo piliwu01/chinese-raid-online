@@ -74,7 +74,7 @@ async function route(req,env){
  if(path==='/ai/explain'&&req.method==='POST')return json(await explain(env,user,body));
  if(path==='/ai/study'&&req.method==='POST')return json(await studyCheck(env,user,{studySummary,categorize}));
  if(path==='/study/summary'&&req.method==='POST'){const row=await db.prepare('SELECT data FROM progress WHERE user_id=?').bind(user.id).first();return json({summary:studySummary(JSON.parse(row.data))});}
- if((path==='/hero/board'||path==='/hero/pending')&&req.method==='POST')return json(await handleHero(env,user,path));
+ if((path==='/hero/board'||path==='/hero/pending')&&req.method==='POST')return json(await handleHero(env,user,path,body));
  if(path==='/world/view'&&req.method==='POST')return json(await worldView(env,user,body));
  // 老師：提前結算這班目前的山海魔王，並重開一隻指定血量的新魔王（同一週）。
  if(path==='/world/restart'&&req.method==='POST'){if(user.role!=='teacher')fail('只有老師可以使用此功能。',403);return json(await restartRound(db,String(body.className||'').trim().slice(0,40),body.maxHp,Date.now(),String(body.expect||'')));}

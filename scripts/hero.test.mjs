@@ -30,5 +30,13 @@ test('backend: weekly settlement is idempotent, awards are claimed once, board h
   assert.equal((await call('/hero/claim',{requestId:crypto.randomUUID()},who)).status,400);assert.equal((await call('/hero/pending',{},who)).data.awards.length,0);
   const board=(await call('/hero/board',{},who)).data;assert.equal(board.boards.totalCorrect.top.length,10);assert.equal(board.boards.totalCorrect.top[0].me,true);assert(!JSON.stringify(board).includes('other'));
   const low=(await call('/login',{username:'s0',password})).cookie;const b0=(await call('/hero/board',{},low)).data;assert.equal(b0.boards.totalCorrect.me,null);
+  // 老師可選班級查看（只讀）：學生想指定別班會被忽略；老師沒選班級 400、空班 404；/hero/pending 一律空。
+  const sneak=(await call('/hero/board',{className:'999'},low)).data;assert.equal(sneak.className,'313');
+  const tid='t1';const ts=freshState();await db.batch([db.prepare('INSERT INTO users(id,username,display_name,class_name,role,password,must_change,created_at) VALUES(?,?,?,?,?,?,0,?)').bind(tid,tid,'老師','','teacher',hash,1),db.prepare('INSERT INTO progress(user_id,data) VALUES(?,?)').bind(tid,JSON.stringify(ts))]);
+  const tc=(await call('/login',{username:'t1',password})).cookie;
+  assert.equal((await call('/hero/board',{},tc)).status,400);assert.equal((await call('/hero/board',{className:'888'},tc)).status,404);
+  const tb=await call('/hero/board',{className:'313'},tc);assert.equal(tb.status,200);assert.equal(tb.data.teacher,true);assert.equal(tb.data.className,'313');assert.equal(tb.data.boards.totalCorrect.top.length,10);assert.equal(tb.data.boards.totalCorrect.me,null);assert(tb.data.boards.totalCorrect.top.every(r=>!r.me));assert(!JSON.stringify(tb.data).includes('同學other'));
+  const other=(await call('/hero/board',{className:'999'},tc)).data;assert.equal(other.boards.totalCorrect.top[0].name,'同學other');
+  assert.deepEqual((await call('/hero/pending',{},tc)).data.awards,[]);
  }finally{await mf.dispose();}
 });

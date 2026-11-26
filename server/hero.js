@@ -29,15 +29,17 @@ export async function markClaimed(db,user,awards){
 }
 const view=(list,me)=>({top:list.filter(r=>r.rank<=HERO.top).map(r=>({rank:r.rank,name:r.name,correct:r.stats.correct,answered:r.stats.answered,accuracy:r.accuracy,me:r.id===me})),
  me:(()=>{const r=list.find(x=>x.id===me);return r?{rank:r.rank,correct:r.stats.correct,answered:r.stats.answered,accuracy:r.accuracy}:null;})(),count:list.length});
-export async function handleHero(env,user,path){
- const db=env.DB,now=Date.now();
- if(user.role!=='student')err('英雄榜只開放學生查看。',403);if(!user.class_name)err('還沒有班級，無法排名。',403);
- if(path==='/hero/pending')return {awards:await pendingAwards(db,user,now)};
+// 老師（2026-11-26）：可指定班級查看英雄榜（只讀排名，沒有「我的名次」，也不領獎）。
+export async function handleHero(env,user,path,body={}){
+ const db=env.DB,now=Date.now(),teacher=user.role==='teacher';
+ if(!teacher&&user.role!=='student')err('英雄榜只開放學生與老師查看。',403);
+ if(path==='/hero/pending')return {awards:teacher?[]:await pendingAwards(db,user,now)};
+ const className=teacher?String(body.className||'').trim().slice(0,40):user.class_name;if(!className)err(teacher?'請先選擇班級。':'還沒有班級，無法排名。',teacher?400:403);
  if(path==='/hero/board'){
-  const rows=await classRows(db,user.class_name);await settle(db,user.class_name,now,rows);
+  const rows=await classRows(db,className);if(teacher&&!rows.length)err('找不到這個班級的學生。',404);await settle(db,className,now,rows);
   const monday=weekStart(now),b=boardsFor(rows,monday),me=rows.find(r=>r.id===user.id);
-  const {results:last}=await db.prepare('SELECT a.board,a.rank,a.jade,a.value,u.display_name name FROM hero_awards a JOIN users u ON u.id=a.user_id WHERE a.class_name=? AND a.week=? ORDER BY a.board,a.rank').bind(user.class_name,previousWeek(now)).all();
-  return {className:user.class_name,week:monday,boards:Object.fromEntries(Object.keys(BOARDS).map(k=>[k,{title:BOARDS[k],...view(b[k],user.id)}])),
+  const {results:last}=await db.prepare('SELECT a.board,a.rank,a.jade,a.value,u.display_name name FROM hero_awards a JOIN users u ON u.id=a.user_id WHERE a.class_name=? AND a.week=? ORDER BY a.board,a.rank').bind(className,previousWeek(now)).all();
+  return {className,teacher,week:monday,boards:Object.fromEntries(Object.keys(BOARDS).map(k=>[k,{title:BOARDS[k],...view(b[k],user.id)}])),
    rules:{weeklyMin:HERO.weeklyMin,totalMin:HERO.totalMin,rewards:HERO.rewards},lastWeek:{week:previousWeek(now),winners:last},myWeek:me?weekStats(me.state,monday):null};
  }
  err('找不到這個功能。',404);
