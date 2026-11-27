@@ -1170,3 +1170,26 @@ body.battle-focus .main-wrap>.battle-layout{max-width:none;margin-left:0;margin-
 .break-cutin.is-boost .cutin-band{border-color:#ffd34d!important;background:linear-gradient(90deg,transparent,#5a3a05ee 15%,#b7791fee 50%,#5a3a05ee 85%,transparent)!important}
 .break-cutin.is-boost .cutin-text strong{color:#fffbea!important;text-shadow:0 0 18px #ffd34d,3px 3px 0 #7a3f12!important}
 @media(prefers-reduced-motion:reduce){.player-fighter.boost-aura::before,.player-fighter.boost-aura::after,.hit-fx .multi-hit,.shield-pips i.shatter{animation:none!important}.shield-pips i.shatter{opacity:0}}
+
+/* ===== 半透明戰鬥介面（2026-11-27）：場景圖鋪滿整個戰鬥區，狀態框、招式卡、題目與答案改成半透明疊在場景上 ===== */
+.battle-main.is-glass{position:relative;isolation:isolate;background:#0b1220;border-color:#ffffff26}
+.battle-backdrop{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.battle-backdrop img{width:100%;height:100%;object-fit:cover;object-position:50% 62%;display:block}
+.battle-backdrop::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0b122014 0%,transparent 30%,#0b122033 55%,#0b12208c 100%)}
+.battle-main.is-glass>.arena,.battle-main.is-glass>.action-panel{position:relative;z-index:1}
+.battle-main.is-glass .arena{background:transparent}
+.battle-main.is-glass .arena>.forest,.battle-main.is-glass .arena>.scene-bg,.battle-main.is-glass .arena-bottom-fade{display:none}
+.battle-main.is-glass .action-panel{background:transparent}
+.battle-main.is-glass .hp-panel{background:#101a2ab3;border-color:#f7d65c40;backdrop-filter:blur(4px)}
+.battle-main.is-glass .move-button{background:#121c2db8;border-color:#f7d65c4d;backdrop-filter:blur(4px);box-shadow:0 4px 14px #0006}
+.battle-main.is-glass .move-button:hover{background:#1f2c44d9;border-color:#f7d65c}
+.battle-main.is-glass .move-button:disabled{opacity:.8;background:#0e1726d9;border-color:#ffffff1f;color:#8f9bb0}
+.battle-main.is-glass .answer-grid button{background:#121c2dc2;border-color:#f7d65c4d;backdrop-filter:blur(4px);box-shadow:0 4px 14px #0006}
+.battle-main.is-glass .answer-grid button:hover{background:var(--yellow);color:#182130;border-color:var(--yellow)}
+.battle-main.is-glass .math-panel,.battle-main.is-glass .result-panel{background:#0e1726b3;border:1px solid #f7d65c33;border-radius:14px;padding:12px 14px;backdrop-filter:blur(4px)}
+.battle-main.is-glass .question-feedback{background:#0e1726d1;backdrop-filter:blur(4px)}
+.battle-main.is-glass .question-feedback.incorrect{background:#1d1a10d9}
+.battle-main.is-glass .solo-potion{background:#0e1726a6;border-radius:12px;padding:6px 10px;backdrop-filter:blur(4px)}
+.battle-main.is-glass .action-heading{color:#d5deeb;text-shadow:0 1px 3px #000c}
+.battle-main.is-glass .boost-pick button{background:#121c2dcc}
+.battle-main.is-glass .boost-pick button.active{background:var(--yellow)}
